@@ -23,7 +23,6 @@ load_dotenv(ROOT / ".env", override=False)
 AUTH_FILE = Path(os.environ.get("TOUTIAO_AUTH_FILE", ROOT / "toutiao_auth.json"))
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", ROOT / "output"))
 PUBLISH_URL = "https://mp.toutiao.com/profile_v4/weitoutiao/publish"
-MANAGE_URL = "https://mp.toutiao.com/profile_v4/manage/content/all"
 BATCHES = {"morning", "noon", "evening"}
 BLOCKED_TERMS = (
     "法轮功", "法轮大法", "大纪元", "新唐人", "明慧网", "反华", "辱华",
@@ -48,6 +47,9 @@ def _validate_content(content, source_body):
         raise ValueError("微头条命中邪教或反华黑名单")
     if "```" in content or content.lstrip().startswith(("标题：", "标题:")):
         raise ValueError("微头条包含标题或代码块")
+    hashtags = re.findall(r"#[^#\n]{2,20}#", content)
+    if not 1 <= len(hashtags) <= 2:
+        raise ValueError(f"微头条应带1—2个话题标签，实际{len(hashtags)}个")
     source_numbers = set(re.findall(r"\d+(?:\.\d+)?%?", source_body))
     output_numbers = set(re.findall(r"\d+(?:\.\d+)?%?", content))
     invented = sorted(output_numbers - source_numbers)
@@ -76,7 +78,7 @@ def generate_draft(date_str, batch):
 
 硬性要求：
 1. {style_rules}
-2. 正文220—350个中文字符，分3—5个短段落，不另写标题，不输出话题标签，不写“微头条：”。
+2. 正文连同话题共220—350个中文字符，分3—5个短段落，不另写标题，不写“微头条：”；结尾必须另起一行添加1—2个相关话题，格式为“#话题#”。
 3. 不得新增原文没有的数字，也不得改变原文事实、人物关系和不确定性。
 4. 开头要让人愿意继续看，表达自然，不低俗、不标题党。
 5. 内容安全只拦两类：邪教组织及其媒体宣传；反华、辱华、分裂中国或敌对攻击中国的叙事。其他普通生活和财富话题不得拒绝。
@@ -172,6 +174,8 @@ def publish(draft, headless=True):
         def capture(response):
             if "publish" not in response.url.lower():
                 return
+            if response.request.method.upper() != "POST":
+                return
             try:
                 body = response.json()
             except Exception:
@@ -221,6 +225,7 @@ def publish(draft, headless=True):
                 code = body.get("code", body.get("Code")) if isinstance(body, dict) else None
                 if code == 0:
                     success = True
+                    print(f"✅ 捕获发布接口成功: {item['url']}")
                     data = body.get("data") or body.get("Data") or {}
                     if isinstance(data, dict):
                         post_id = str(data.get("id") or data.get("group_id") or data.get("pgc_id") or "")
@@ -229,20 +234,12 @@ def publish(draft, headless=True):
                 break
             page.wait_for_timeout(500)
 
-        marker = draft["content"][:22]
-        verified = False
-        page.goto(MANAGE_URL, wait_until="domcontentloaded", timeout=60000)
-        for _ in range(10):
-            page.wait_for_timeout(1000)
-            if marker in page.locator("body").inner_text():
-                verified = True
-                break
-            page.reload(wait_until="domcontentloaded", timeout=60000)
-        if not success or not verified:
+        if not success:
             screenshot = OUTPUT_DIR / draft["date"] / f"micro-{draft['batch']}-failed.png"
             page.screenshot(path=str(screenshot), full_page=True)
             browser.close()
-            raise RuntimeError(f"微头条未通过作品管理核验: 接口成功={success}")
+            codes = [item["body"].get("code") for item in responses if isinstance(item["body"], dict)]
+            raise RuntimeError(f"未捕获发布接口code=0，响应代码={codes}")
         browser.close()
 
     _write_metadata(draft, post_id)

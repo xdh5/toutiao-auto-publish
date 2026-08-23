@@ -7,7 +7,7 @@ import micro_publisher
 
 def _valid_content():
     paragraph = "中年以后我才明白，真正让人安心的不是一句漂亮承诺，而是每天认真工作、按时存下一点钱，也愿意照顾好身边的人。"
-    return "\n\n".join([paragraph, paragraph, paragraph, paragraph, paragraph])
+    return "\n\n".join([paragraph, paragraph, paragraph, paragraph, paragraph]) + "\n\n#中年生活#"
 
 
 def test_validate_micro_content_accepts_valid_length_and_source_numbers():
@@ -16,9 +16,15 @@ def test_validate_micro_content_accepts_valid_length_and_source_numbers():
 
 
 def test_validate_micro_content_rejects_invented_number():
-    content = _valid_content() + "后来我又多赚了99元。"
+    content = _valid_content().replace("\n\n#中年生活#", "后来我又多赚了99元。\n\n#中年生活#")
     with pytest.raises(ValueError, match="新增了原文没有的数字"):
         micro_publisher._validate_content(content, _valid_content())
+
+
+def test_validate_micro_content_requires_hashtag():
+    content = _valid_content().replace("\n\n#中年生活#", "")
+    with pytest.raises(ValueError, match="话题标签"):
+        micro_publisher._validate_content(content, content)
 
 
 def test_generate_noon_micro_uses_news_article(tmp_path, monkeypatch):
