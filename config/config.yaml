@@ -1,0 +1,126 @@
+output:
+  base_dir: ./output
+  date_format: '%Y-%m-%d'
+  article_prefix: article
+  image_dir: images
+llm:
+  topic_selector:
+    provider: hy3
+    model: hy3
+    temperature: 0.7
+    max_tokens: 4096
+  article_generator:
+    provider: hy3
+    model: hy3
+    temperature: 0.8
+    max_tokens: 8192
+data_sources:
+  match_api:
+    provider: zhibo8-nba
+    base_url: https://www.zhibo8.com
+    rate_limit: 10
+    leagues:
+    - id: nba
+      name: NBA
+  gzh_trending:
+    provider: wechat_public_account
+    script: skills/gzh-explosive-content-detector/scripts/fetch_gzh_trends.py
+    keyword_groups:
+    - NBA,篮球
+    - NBA,季后赛,总决赛,常规赛
+    - NBA,詹姆斯,库里,杜兰特,东契奇,约基奇
+    - NBA,绝杀,逆转,加时,三双,纪录
+    - NBA,交易,签约,续约,自由球员,选秀
+  hupu:
+    provider: hupu_scraper
+    script: hupu_scraper.py
+    enabled: true
+    timeout_seconds: 300
+images:
+  min_width: 800
+  min_height: 600
+  max_size_bytes: 5242880
+  min_size_bytes: 51200
+  preferred_orientation: landscape
+  max_per_article: 5
+  required_per_article: 3
+  sources:
+  - name: wikipedia
+    priority: 1
+  - name: footyrenders
+    priority: 2
+  - name: unsplash
+    priority: 3
+schedule:
+  timezone: Asia/Shanghai
+  batches:
+    morning:
+      name: 晨读
+      cron: 0 0 * * *
+      article_count: 2
+      columns:
+      - NBA早报
+      - 话题擂台
+    noon:
+      name: 午间
+      cron: 0 4 * * *
+      article_count: 2
+      columns:
+      - 午间快讯
+      - 热点速评
+    evening:
+      name: 晚间
+      cron: 30 9 * * *
+      article_count: 2
+      columns: dynamic
+      column_pool:
+      - NBA赛场日报
+      - 老六辣评
+      - 争议裁判室
+      - 交易雷达
+      - 球迷众生相
+season_weights:
+- months:
+  - 7
+  - 8
+  - 9
+  weights:
+    热点球评: 1.0
+    交易资讯: 2.0
+    排行榜: 1.0
+    八卦趣事: 1.2
+    战术解析: 0.8
+  label: NBA休赛期过渡
+- months:
+  - 4
+  - 5
+  - 6
+  weights:
+    热点球评: 2.0
+    交易资讯: 0.8
+    排行榜: 1.2
+    八卦趣事: 0.8
+    战术解析: 1.5
+  label: NBA季后赛
+- months:
+  - 2
+  weights:
+    热点球评: 1.0
+    交易资讯: 1.5
+    排行榜: 1.0
+    八卦趣事: 1.2
+    战术解析: 0.8
+  label: NBA全明星与交易截止期
+- months:
+  - 1
+  - 3
+  - 10
+  - 11
+  - 12
+  weights:
+    热点球评: 1.0
+    交易资讯: 1.0
+    排行榜: 1.0
+    八卦趣事: 1.0
+    战术解析: 1.0
+  label: NBA常规赛

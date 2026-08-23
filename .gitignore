@@ -1,0 +1,18 @@
+output/
+output_*/
+!output/**/metadata.json
+toutiao_auth.json
+__pycache__/
+*.pyc
+/tmp/
+logs/
+.env
+
+# OpenWolf memory system
+.wolf/
+.git-football-backup/
+
+# WeChat miniprogram
+miniprogram/private.*.key
+miniprogram/node_modules/
+static_data/
