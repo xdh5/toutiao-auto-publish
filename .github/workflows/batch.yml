@@ -216,7 +216,7 @@ jobs:
             echo "✅ 已同步历史批次元数据到 OUTPUT_DIR"
           fi
 
-      - name: 生成文章
+      - name: 生成本批次文章
         id: generate
         if: steps.params.outputs.skip != 'true'
         env:
@@ -229,7 +229,7 @@ jobs:
           WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
           WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
         run: |
-          python orchestrator.py "${{ steps.params.outputs.today }}" --batch="${{ steps.params.outputs.batch }}"
+          python orchestrator.py "${{ steps.params.outputs.today }}" --batch="${{ steps.params.outputs.batch }}" --count=1 --defer-completion
 
       - name: 回写生成结果（跨批次去重）
         if: steps.params.outputs.skip != 'true' && !cancelled()
@@ -298,8 +298,17 @@ jobs:
         run: |
           python publisher.py "${{ steps.params.outputs.today }}" --headless --batch="${{ steps.params.outputs.batch }}"
 
+      - name: 生成并发布对应微头条
+        if: steps.params.outputs.skip != 'true'
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          TOUTIAO_AUTH_FILE: /tmp/auth/toutiao_auth.json
+          OUTPUT_DIR: ${{ runner.temp }}/output
+        run: |
+          python micro_publisher.py "${{ steps.params.outputs.today }}" --batch="${{ steps.params.outputs.batch }}"
+
       - name: 回写批次状态（幂等保护）
-        if: always() && steps.params.outputs.skip != 'true'
+        if: success() && steps.params.outputs.skip != 'true'
         env:
           TODAY: ${{ steps.params.outputs.today }}
           BATCH: ${{ steps.params.outputs.batch }}
@@ -321,7 +330,7 @@ jobs:
           # BUGFIX: 从 dst（step 11 已合并后的元数据）读取，而非 src（仅当前批次）
           # 否则会覆盖 step 11 合并好的跨批次文章列表
           python3 -c "
-          import json
+          import json, os
           from pathlib import Path
 
           src = Path('${SRC}')
@@ -339,6 +348,12 @@ jobs:
           else:
               # step 11 可能未执行（如 metadata.json 不存在），直接用 src
               new_meta = json.loads(src.read_text())
+
+          current_batch = os.environ.get('BATCH', '')
+          completed = set(new_meta.get('batches_completed', []))
+          if current_batch:
+              completed.add(current_batch)
+          new_meta['batches_completed'] = sorted(completed)
 
           dst.parent.mkdir(parents=True, exist_ok=True)
           dst.write_text(json.dumps(new_meta, ensure_ascii=False, indent=2))

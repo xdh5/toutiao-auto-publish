@@ -1162,6 +1162,10 @@ def publish_all(date_str, draft_mode=False, headless=False, batch_filter=None):
     else:
         send_wxpusher("NBA自媒体 ❌", f"{date_str} 发布全部失败\n\n{summary}")
 
+    # 云端只有在长文章确实发布成功后才能继续发布对应微头条。
+    if publish_fail > 0:
+        raise RuntimeError(summary)
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

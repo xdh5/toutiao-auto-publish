@@ -1906,11 +1906,14 @@ def main():
     date_str = None
     batch_mode = "auto"
     article_limit = None
+    defer_completion = False
     for arg in sys.argv[1:]:
         if arg.startswith("--batch="):
             batch_mode = arg.split("=", 1)[1]
         elif arg.startswith("--count="):
             article_limit = max(1, int(arg.split("=", 1)[1]))
+        elif arg == "--defer-completion":
+            defer_completion = True
         elif not arg.startswith("--"):
             date_str = arg
     if date_str is None:
@@ -2079,7 +2082,8 @@ def main():
             result_msg = "未能生成任何文章（所有话题改写失败）"
             print(f"ERROR: {result_msg}")
             # 保存空批次元数据 — 避免同批次其他 cron 触发点重复重试
-            save_batch_state(date_str, batch_mode if batch_mode != "auto" else "full", [])
+            if not defer_completion:
+                save_batch_state(date_str, batch_mode if batch_mode != "auto" else "full", [])
             send_wxpusher("NBA自媒体 ⚠️", f"{date_str} 发文任务中止：{result_msg}")
             return
 
@@ -2088,7 +2092,8 @@ def main():
                                      extra=extra_meta)
 
         # Save batch state for cross-batch dedup
-        save_batch_state(date_str, batch_mode if batch_mode != "auto" else "full", result.get("articles", []))
+        if not defer_completion:
+            save_batch_state(date_str, batch_mode if batch_mode != "auto" else "full", result.get("articles", []))
 
 
         elapsed = int(time.time() - start_time)
