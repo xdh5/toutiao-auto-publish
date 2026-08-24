@@ -14,9 +14,10 @@ on:
       app:
         description: '业务选择'
         required: true
-        default: 'finance'
+        default: both
         type: choice
         options:
+          - both
           - finance
           - football
       batch:
@@ -32,17 +33,23 @@ on:
 
 jobs:
   generate-and-publish:
+    name: 发布 ${{ matrix.app }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: ${{ fromJSON(inputs.app == 'both' && '["finance","football"]' || format('["{0}"]', inputs.app)) }}
     concurrency:
       group: toutiao-publish
       cancel-in-progress: false
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       PYTHONUNBUFFERED: 1
-      CONTENT_APP: ${{ inputs.app || 'finance' }}
-      OUTPUT_DIR: output/${{ inputs.app || 'finance' }}
-      MAX_ARTICLE_IMAGES: ${{ inputs.app == 'finance' && '1' || '3' }}
+      CONTENT_APP: ${{ matrix.app }}
+      OUTPUT_DIR: output/${{ matrix.app }}
+      MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +78,7 @@ jobs:
 
       - name: 解码头条号登录状态
         run: |
-          if [ "${{ inputs.app }}" = "football" ] && [ -z "$TOUTIAO_AUTH_GZ" ]; then
+          if [ "${{ matrix.app }}" = "football" ] && [ -z "$TOUTIAO_AUTH_GZ" ]; then
             TOUTIAO_AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"
           fi
           if [ -n "$TOUTIAO_AUTH_GZ" ]; then
@@ -81,7 +88,7 @@ jobs:
             echo "⚠️ 未设置 TOUTIAO_AUTH_GZ，将跳过发布步骤"
           fi
         env:
-          TOUTIAO_AUTH_GZ: ${{ inputs.app == 'football' && secrets.FOOTBALL_TOUTIAO_AUTH_GZ || secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
+          TOUTIAO_AUTH_GZ: ${{ matrix.app == 'football' && secrets.FOOTBALL_TOUTIAO_AUTH_GZ || secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
           FOOTBALL_AUTH_GZ_1: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_1 }}
           FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
 
@@ -174,9 +181,9 @@ jobs:
           echo "batch=$BATCH" >> $GITHUB_OUTPUT
           python orchestrator.py "$TODAY" --batch="$BATCH" --count=1 --defer-completion
         env:
-          HY3_API_KEY: ${{ inputs.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
-          DASHSCOPE_API_KEY: ${{ inputs.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ inputs.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
+          HY3_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
           WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY || secrets.WORLD_NEWS_API_KEY }}
           WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
           WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
@@ -203,7 +210,7 @@ jobs:
           BATCH="${{ steps.generate.outputs.batch }}"
           python micro_publisher.py "$TODAY" --batch="$BATCH"
         env:
-          DASHSCOPE_API_KEY: ${{ inputs.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
           TOUTIAO_AUTH_FILE: toutiao_auth.json
 
       - name: 上传文章存档

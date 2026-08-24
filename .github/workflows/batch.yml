@@ -4,6 +4,7 @@ permissions:
   contents: write
 
 # 纯 GitHub Actions 调度（无外部依赖）：
+#   每个批次按 finance → football 顺序发布，两个业务共用发布锁
 #   每个批次 3 个 cron，从目标时间开始每隔 ~10-20 分钟触发一次
 #   第一批成功执行后，后续通过幂等保护自动跳过
 #   += 晨读增加额外预触发窗口 (UTC 23:55 = CST 07:55)，与 00:xx 不同时间窗，
@@ -40,10 +41,12 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: '业务 (finance/football)'
+        description: '业务 (both/finance/football)'
         required: true
+        default: both
         type: choice
         options:
+          - both
           - finance
           - football
       batch:
@@ -62,8 +65,14 @@ on:
 
 jobs:
   publish:
+    name: 发布 ${{ matrix.app }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: ${{ fromJSON((github.event_name == 'schedule' || inputs.app == 'both') && '["finance","football"]' || format('["{0}"]', inputs.app)) }}
     concurrency:
       group: toutiao-publish
       cancel-in-progress: false
@@ -105,15 +114,7 @@ jobs:
           FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
         run: |
           mkdir -p /tmp/auth
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            APP="${{ inputs.app }}"
-          else
-            SCHEDULE_MINUTE=$(echo "${{ github.event.schedule }}" | awk '{print $1}')
-            case "$SCHEDULE_MINUTE" in
-              2|12|22|42|52) APP="football" ;;
-              *) APP="finance" ;;
-            esac
-          fi
+          APP="${{ matrix.app }}"
           if [ "$APP" = "football" ]; then
             if [ -n "$FOOTBALL_AUTH_GZ" ]; then
               AUTH_GZ="$FOOTBALL_AUTH_GZ"
@@ -132,15 +133,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # App
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            APP="${{ inputs.app }}"
-          else
-            SCHEDULE_MINUTE=$(echo "${{ github.event.schedule }}" | awk '{print $1}')
-            case "$SCHEDULE_MINUTE" in
-              2|12|22|42|52) APP="football" ;;
-              *) APP="finance" ;;
-            esac
-          fi
+          APP="${{ matrix.app }}"
           echo "app=$APP" >> $GITHUB_OUTPUT
 
           # Date
