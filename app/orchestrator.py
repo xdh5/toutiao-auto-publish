@@ -1267,12 +1267,21 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
                 last_hint = "改写返回空结果，请确保输出完整的JSON"
                 continue
 
+            content = str(art.get("content", ""))
+            if date_str:
+                duplicated, matched_title, similarity = check_cross_day_duplicate(
+                    str(art.get("title", "")), content, date_str)
+                if duplicated:
+                    last_hint = f"与过去7天文章《{matched_title}》相似度{similarity}%"
+                    if attempt < max_retries:
+                        continue
+                    return {}, f"跨日重复: {last_hint}"
+
             # 财经稿采用一次生成结果，不做字数、事实或二次模型复核。
             if match_context.get("data_source") == "worldnews":
                 return art, None
 
             # Basic content check
-            content = art.get("content", "")
             word_range = topic.get("_word_count_range", [500, 800])
             min_words = word_range[0] if isinstance(word_range, (list, tuple)) else 500
             if match_context.get("data_source") == "worldnews" and not content.strip():
@@ -1567,7 +1576,8 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
                        "column_id": art.get("_column_id", ""),
                        "column_name": art.get("_column_name", ""),
                        "batch_name": art.get("_batch_name", ""),
-                       "micro_content": art.get("micro_content", "")})
+                       "micro_content": art.get("micro_content", ""),
+                       "content": str(art.get("content", ""))[:200]})
 
     meta = {"total_articles": len(saved), "articles": saved, "topics": topics, "data_sources": {}}
     if extra:
