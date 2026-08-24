@@ -1,7 +1,7 @@
 {
   "date": "2026-08-24",
-  "generated_at": "2026-08-24T01:53:47.474954",
-  "total_articles": 2,
+  "generated_at": "2026-08-24T01:59:14.228131",
+  "total_articles": 3,
   "articles": [
     {
       "index": 1,
@@ -70,11 +70,45 @@
       "column_id": "ai-topic-morning",
       "column_name": "AI创作话题",
       "batch_name": "晨读"
+    },
+    {
+      "index": 1,
+      "title": "42岁失业后，我才懂靠山不是人，是本事",
+      "path": "/home/runner/work/_temp/output/2026-08-24/article-1-42岁失业后我才-b8750a.md",
+      "slug": "42岁失业后我才-b8750a",
+      "tags": [
+        "wooden spoon handmade",
+        "middle age career change",
+        "small business startup",
+        "family financial resilience",
+        "craftsmanship income"
+      ],
+      "keywords": [
+        "wooden spoon handmade",
+        "middle age career change",
+        "small business startup",
+        "family financial resilience",
+        "craftsmanship income"
+      ],
+      "images": [
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-001.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-002.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-003.jpg"
+      ],
+      "sources_used": [
+        "头条创作助手"
+      ],
+      "source_post": "",
+      "originality_note": "",
+      "content_type": "AI话题",
+      "column_id": "ai-topic-morning",
+      "column_name": "AI创作话题",
+      "batch_name": "晨读"
     }
   ],
   "topics": [
     {
-      "title": "人老后，什么才是你的底气",
+      "title": "一个人最大的靠山,是什么?",
       "angle": "严格依据原文",
       "keywords": [
         "middle aged life",
@@ -84,7 +118,7 @@
       "keywords_cn": [],
       "content_type": "AI话题",
       "score": 100,
-      "_source_article_id": "toutiao-2026-08-24-morning-人老后，什么才是你的底气",
+      "_source_article_id": "toutiao-2026-08-24-morning-一个人最大的靠山,是什么?",
       "_finance": true,
       "_column_id": "ai-topic-morning",
       "_column_name": "AI创作话题",
