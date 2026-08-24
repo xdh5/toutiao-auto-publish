@@ -97,17 +97,11 @@ jobs:
       - name: 代码自检
         run: python3 tests/test_no_dead_references.py
 
-      - name: 检查本批次是否已经完成
+      - name: 手动任务不检查批次名额
         id: dedup
-        env:
-          TODAY: ${{ needs.prepare.outputs.today }}
-          BATCH: ${{ needs.prepare.outputs.batch }}
         run: |
-          SKIP=$(python3 scripts/check_batch_completed.py)
-          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
-          if [ "$SKIP" = "true" ]; then
-            echo "本批次已经完成，不重复写作"
-          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "手动发布不读取也不占用早中晚批次名额"
 
       - name: 抓取素材并写文章
         env:
@@ -254,27 +248,7 @@ jobs:
           TOUTIAO_AUTH_FILE: toutiao_auth.json
         run: |
           python -m app.micro_publisher "${{ needs.prepare.outputs.today }}" \
-            --batch="${{ needs.prepare.outputs.batch }}"
-
-      - name: 合并并推送批次完成状态
-        if: steps.state.outputs.state == 'ready'
-        run: |
-          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
-          python3 scripts/merge_batch_metadata.py \
-            --old "/tmp/old-${{ matrix.app }}.json" --new "$META" --output "$META" \
-            --batch "${{ needs.prepare.outputs.batch }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f "$META"
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "chore: ${{ matrix.app }} ${{ needs.prepare.outputs.today }} ${{ needs.prepare.outputs.batch }} 完成"
-          for attempt in 1 2 3; do
-            git pull --rebase origin main || true
-            if git push origin HEAD:main; then exit 0; fi
-            sleep $((attempt * 2))
-          done
-          echo "metadata 推送失败"
-          exit 1
+            --batch="${{ needs.prepare.outputs.batch }}" --no-record-batch
 
       - name: 保存发布结果
         if: always()

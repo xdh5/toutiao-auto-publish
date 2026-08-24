@@ -125,13 +125,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          META_API="repos/${{ github.repository }}/contents/output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json?ref=main"
-          COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
-          if echo "$COMPLETED" | grep -q "${{ needs.prepare.outputs.batch }}"; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "本批次已完成，不重复生成"
-          else
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "手动发布不读取也不占用早中晚批次名额"
+          else
+            META_API="repos/${{ github.repository }}/contents/output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json?ref=main"
+            COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
+            if echo "$COMPLETED" | grep -q "${{ needs.prepare.outputs.batch }}"; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "本批次已完成，不重复生成"
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: 抓取素材并写文章
@@ -231,13 +236,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          META_API="repos/${{ github.repository }}/contents/output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json?ref=main"
-          COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
-          if echo "$COMPLETED" | grep -q "${{ needs.prepare.outputs.batch }}"; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "其他任务已完成本批次，停止重复发布"
-          else
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "手动发布不检查自动批次状态"
+          else
+            META_API="repos/${{ github.repository }}/contents/output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json?ref=main"
+            COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
+            if echo "$COMPLETED" | grep -q "${{ needs.prepare.outputs.batch }}"; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "其他任务已完成本批次，停止重复发布"
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: 设置 Python
@@ -281,11 +291,15 @@ jobs:
           DASHSCOPE_API_KEY: ${{ matrix.app == 'basketball' && secrets.BASKETBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
           TOUTIAO_AUTH_FILE: toutiao_auth.json
         run: |
+          EXTRA_ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EXTRA_ARGS="--no-record-batch"
+          fi
           python -m app.micro_publisher "${{ needs.prepare.outputs.today }}" \
-            --batch="${{ needs.prepare.outputs.batch }}"
+            --batch="${{ needs.prepare.outputs.batch }}" $EXTRA_ARGS
 
       - name: 合并并推送批次完成状态
-        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
+        if: github.event_name == 'schedule' && steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         run: |
           META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
           python3 scripts/merge_batch_metadata.py \

@@ -97,7 +97,7 @@ def _write_metadata(draft, post_id=""):
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def publish(draft, headless=True):
+def publish(draft, headless=True, record_batch=True):
     """发布微头条，并在作品管理页核验正文开头。"""
     if not AUTH_FILE.exists():
         raise FileNotFoundError(f"登录状态不存在: {AUTH_FILE}")
@@ -184,7 +184,10 @@ def publish(draft, headless=True):
             raise RuntimeError(f"未捕获发布接口code=0，响应代码={codes}")
         browser.close()
 
-    _write_metadata(draft, post_id)
+    if record_batch:
+        _write_metadata(draft, post_id)
+    else:
+        print("ℹ️ 手动发布不记录批次完成状态")
     return post_id
 
 
@@ -194,12 +197,15 @@ def main():
     parser.add_argument("--batch", required=True, choices=sorted(BATCHES))
     parser.add_argument("--show", action="store_true", help="只生成显示，不发布")
     parser.add_argument("--headed", action="store_true")
+    parser.add_argument("--no-record-batch", action="store_true",
+                        help="发布成功后不占用早中晚批次名额")
     args = parser.parse_args()
     draft = generate_draft(args.date, args.batch)
     print(f"\n话题：{draft['topic']}\n\n{draft['content']}\n")
     if args.show:
         return 0
-    post_id = publish(draft, headless=not args.headed)
+    post_id = publish(draft, headless=not args.headed,
+                      record_batch=not args.no_record_batch)
     print(f"微头条发布成功 id={post_id or '接口未返回ID'}")
     return 0
 

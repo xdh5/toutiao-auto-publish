@@ -30,11 +30,30 @@ def test_manual_workflows_offer_both():
         assert "max-parallel: 1" in workflow
 
 
-def test_both_workflows_persist_metadata_after_successful_publish():
-    for name in ("batch.yml", "daily.yml"):
-        workflow = (ROOT / ".github" / "workflows" / name).read_text(
-            encoding="utf-8"
-        )
+def test_only_scheduled_runs_persist_batch_completion():
+    scheduled = (ROOT / ".github" / "workflows" / "batch.yml").read_text(
+        encoding="utf-8"
+    )
+    manual = (ROOT / ".github" / "workflows" / "daily.yml").read_text(
+        encoding="utf-8"
+    )
 
-        assert "scripts/merge_batch_metadata.py" in workflow
-        assert "git push origin HEAD:main" in workflow
+    assert "scripts/merge_batch_metadata.py" in scheduled
+    assert "github.event_name == 'schedule'" in scheduled
+    assert "git push origin HEAD:main" in scheduled
+    assert "scripts/merge_batch_metadata.py" not in manual
+    assert "git push origin HEAD:main" not in manual
+
+
+def test_manual_runs_never_read_or_record_batch_slots():
+    scheduled = (ROOT / ".github" / "workflows" / "batch.yml").read_text(
+        encoding="utf-8"
+    )
+    manual = (ROOT / ".github" / "workflows" / "daily.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "手动发布不读取也不占用早中晚批次名额" in scheduled
+    assert "手动发布不读取也不占用早中晚批次名额" in manual
+    assert "--no-record-batch" in scheduled
+    assert "--no-record-batch" in manual
