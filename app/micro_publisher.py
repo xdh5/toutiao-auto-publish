@@ -13,9 +13,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 
-from .constants import DASHSCOPE_KEY, DASHSCOPE_URL, CONTENT_APP
+from .constants import CONTENT_APP
 from .publisher import launch_browser, load_articles
-from .utils import call_llm, load_prompt_template, safe_json_loads
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,27 +23,10 @@ AUTH_FILE = Path(os.environ.get("TOUTIAO_AUTH_FILE", ROOT / "toutiao_auth.json")
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", ROOT / "output"))
 PUBLISH_URL = "https://mp.toutiao.com/profile_v4/weitoutiao/publish"
 BATCHES = {"morning", "noon", "evening"}
-def _validate_content(content, source_body):
-    compact = re.sub(r"\s+", "", content or "")
-    min_chars, max_chars = (180, 300) if CONTENT_APP == "basketball" else (220, 350)
-    if not min_chars <= len(compact) <= max_chars:
-        raise ValueError(f"微头条长度异常: {len(compact)}字，应为{min_chars}—{max_chars}字")
-    if "```" in content or content.lstrip().startswith(("标题：", "标题:")):
-        raise ValueError("微头条包含标题或代码块")
-    hashtags = re.findall(r"#[^#\n]{2,20}#", content)
-    if not 1 <= len(hashtags) <= 2:
-        raise ValueError(f"微头条应带1—2个话题标签，实际{len(hashtags)}个")
-    if CONTENT_APP == "basketball" and not any(mark in content for mark in ("？", "?")):
-        raise ValueError("篮球微头条缺少文末互动问题")
-    source_numbers = set(re.findall(r"\d+(?:\.\d+)?%?", source_body))
-    output_numbers = set(re.findall(r"\d+(?:\.\d+)?%?", content))
-    invented = sorted(output_numbers - source_numbers)
-    if invented:
-        raise ValueError(f"微头条新增了原文没有的数字: {invented}")
 
 
 def generate_draft(date_str, batch):
-    """把本批次唯一一篇文章一次生成对应类型的微头条。"""
+    """读取文章改写时一并生成的微头条，不再单独调用模型。"""
     if batch not in BATCHES:
         raise ValueError(f"未知批次: {batch}")
     articles = load_articles(date_str, batch_filter=batch)
@@ -52,43 +34,19 @@ def generate_draft(date_str, batch):
         raise ValueError(f"{date_str} {batch} 应有且仅有1篇文章，实际{len(articles)}篇")
     article = articles[0]
     topic = str(article.get("title") or "").strip()
-    source_body = str(article.get("body") or "").strip()
-    if not topic or not source_body:
-        raise ValueError("本批次文章标题或正文为空")
+    if not topic:
+        raise ValueError("本批次文章标题为空")
     is_basketball = CONTENT_APP == "basketball"
-    prompt_template = load_prompt_template("micro_post.txt")
-    system_prompt = load_prompt_template("micro_post_system.txt", "common")
-    if not prompt_template or not system_prompt:
-        raise ValueError("缺少微头条 Prompt")
-    content = ""
-    last_error = ""
-    for attempt in range(3):
-        retry_note = (f"\n上一次生成未通过：{last_error}。这次必须修正并重新输出完整正文。"
-                      if last_error else "")
-        prompt = prompt_template.format(
-            topic=topic,
-            source_body=source_body[:7000],
-            retry_block=retry_note,
-        )
-        raw = call_llm(
-            DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.3,
-            max_tokens=1800,
-        )
-        result = safe_json_loads(raw)
-        content = str(result.get("content") or "").strip()
-        try:
-            _validate_content(content, source_body)
-            break
-        except ValueError as exc:
-            last_error = str(exc)
-            if attempt == 2:
-                raise
-            print(f"微头条第{attempt + 1}次生成未通过，自动重写：{last_error}")
+    metadata_path = Path(article["file"]).parent / "metadata.json"
+    if not metadata_path.exists():
+        raise ValueError("缺少文章 metadata，无法读取同轮生成的微头条")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    article_index = str(article.get("index", ""))
+    row = next((item for item in metadata.get("articles", [])
+                if str(item.get("index", "")) == article_index), None)
+    content = str((row or {}).get("micro_content") or "").strip()
+    if not content:
+        raise ValueError("文章改写结果没有返回 micro_content")
 
     output_dir = OUTPUT_DIR / date_str
     output_dir.mkdir(parents=True, exist_ok=True)

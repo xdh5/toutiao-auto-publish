@@ -8,7 +8,7 @@
 - 12:00：采集与中国读者相关的海外 `business` / `technology` 新闻。
 - 17:30：采集当天尚未发布的国内 `business` / `technology` 新闻。
 
-三批正篇无论来源长短均由千问写成450—550字中文新闻，英文来源先翻译为中文；三批微头条均压缩为220—350字。每篇正篇最多使用1张配图，找不到合适图片时允许无图发布。每天合计发布3篇文章和3条微头条。
+三批正篇由千问根据真实来源改写；同一次改写同时返回对应微头条，不再单独调用千问生成或复核。每篇正篇最多使用1张配图，找不到合适图片时允许无图发布。每天合计发布3篇文章和3条微头条。
 
 篮球业务采集 NBA 赛程、战报、排名、交易与热点新闻。财经与篮球的元数据分别保存在 `output/finance/` 和 `output/basketball/`，不会互相去重或覆盖。
 
@@ -28,14 +28,13 @@ app/
 ├── publisher.py               # 公用长文章发布
 └── micro_publisher.py         # 公用微头条发布
 prompts/
-├── common/                    # 公用 system 提示词
-├── finance/                   # 财经选题、改写、事实复核、微头条
-└── basketball/                # 篮球选题、改写、微头条、紧急球评、赛前预测
+├── finance/                   # 仅 topic_selector.txt、rewrite_article.txt
+└── basketball/                # 仅 topic_selector.txt、rewrite_article.txt
 ```
 
 两个业务只拥有各自的采集实现。写作、去重、配图和发布均在公用层；公用采集接口按 `CONTENT_APP` 延迟加载一个采集器，因此财经进程不会加载篮球采集代码，篮球进程也不会加载财经采集代码。
 
-财经和篮球都执行同一套两阶段写作链：`topic_selector.txt` 从真实素材选择文章，`rewrite_article.txt` 直接根据唯一来源改写成发布稿。微头条、财经事实复核、篮球紧急球评、赛前预测以及各次调用的 system 指令也全部存放在 `prompts/`，Python 代码只负责装载模板和填入运行数据。
+财经和篮球都执行同一套两阶段写作链：`topic_selector.txt` 从真实素材选择文章，`rewrite_article.txt` 根据唯一来源同时生成长文章和 `micro_content`。微头条发布程序直接读取 `micro_content`，不再进行独立写作、字数检查或事实复核。
 
 ## 自动流程
 

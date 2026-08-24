@@ -458,15 +458,12 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
             "source_materials": chr(10).join(source_lines),
         }.items():
             prompt = prompt.replace("{" + key + "}", str(value))
-        system_prompt = load_prompt_template("topic_selector_system.txt")
-        if not system_prompt:
-            raise ValueError("缺少 finance/topic_selector_system.txt")
         selected = None
         for attempt in range(3):
             try:
                 selected = safe_json_loads(call_llm(
                     DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL,
-                    [{"role": "system", "content": system_prompt},
+                    [{"role": "system", "content": "严格从候选素材选择财经话题，只输出JSON。"},
                      {"role": "user", "content": prompt}],
                     temperature=0.2, max_tokens=3000))
                 break
@@ -570,32 +567,38 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
                 weight_hint += f"降低频率: {', '.join(low_types)}\n"
 
     # NBA 休赛期应把重心转向交易、签约、选秀和赛季前瞻。
-    season_guidance = (load_prompt_template("offseason_guidance.txt")
-                       if season_label == "休赛期过渡" else "")
-
-    materials_template = load_prompt_template("topic_materials.txt")
-    if not materials_template:
-        raise ValueError("缺少 basketball/topic_materials.txt")
-    prompt = materials_template
-    for key, value in {
-        "date": match_data["date"],
-        "news_lines": "".join(news_lines),
-        "match_lines": "".join(lines),
-        "history_text": history_text,
-        "cross_batch_text": cross_batch_text,
-        "weight_hint": weight_hint,
-        "season_guidance": season_guidance,
-        "topic_count": topic_count,
-    }.items():
-        prompt = prompt.replace("{" + key + "}", str(value))
-
     topic_selector_prompt = load_prompt_template("topic_selector.txt").replace(
         "{topic_count}", str(topic_count))
     if not topic_selector_prompt:
         raise ValueError("缺少 basketball/topic_selector.txt")
 
+    season_guidance = ""
+    if season_label == "休赛期过渡":
+        season_guidance = """
+## 📌 NBA休赛期选题指引
+1. 优先选择交易、签约、续约、自由球员、选秀和新赛季前瞻。
+2. 官宣、可靠媒体报道和流言必须明确区分。
+3. 没有比赛时不要虚构赛况或球员数据，所有事实必须有对应源文章。
+"""
+    prompt = topic_selector_prompt + f"""
+
+## 本次运行素材
+当前日期：{match_data['date']}
+
+## 今日NBA文章（主要选题来源）
+{"".join(news_lines)}
+
+## 今日比赛结果（仅作背景参考）
+{"".join(lines)}
+
+{history_text}
+{cross_batch_text}
+{weight_hint}
+{season_guidance}
+"""
+
     messages = [
-        {"role": "system", "content": topic_selector_prompt},
+        {"role": "system", "content": "你是头条号NBA博主‘岛哥侃篮球’的岛哥。严格从素材选题，只输出JSON。"},
         {"role": "user", "content": prompt}
     ]
     # JSON 解析失败时重新请求，避免偶发的非 JSON 输出中断整批任务。
@@ -976,12 +979,9 @@ def _rewrite_finance_article(topic, source, index=1, retry_hint=""):
         source_title=source_title, source_text=source_text[:9000],
         retry_block=("上次失败：" + retry_hint) if retry_hint else "",
     )
-    system_prompt = load_prompt_template("rewrite_article_system.txt")
-    if not system_prompt:
-        raise ValueError("缺少 finance/rewrite_article_system.txt")
     first = safe_json_loads(call_llm(
         DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-        [{"role": "system", "content": system_prompt},
+        [{"role": "system", "content": "对照唯一来源直接改写，只输出JSON。"},
          {"role": "user", "content": prompt}], temperature=0.1, max_tokens=5000))
     generated = first.get("article") if isinstance(first, dict) and isinstance(first.get("article"), dict) else first
     if not isinstance(generated, dict):
@@ -989,42 +989,6 @@ def _rewrite_finance_article(topic, source, index=1, retry_hint=""):
     article = dict(generated)
     article["source_verbatim"] = False
 
-    title = str(article.get("title", "")).strip()
-    backup_title = str(article.get("backup_title", "")).strip()
-    if not 2 <= len(title) <= 30 and 2 <= len(backup_title) <= 30:
-        article["title"] = backup_title
-        title = backup_title
-    if not 2 <= len(title) <= 30:
-        raise ValueError(f"标题长度为{len(title)}字，应为2—30字")
-    if not re.search(r"[\u4e00-\u9fff]", title):
-        raise ValueError("新闻标题不是中文")
-
-    content = str(article.get("content", "")).strip()
-    compact_len = len(re.sub(r"\s+", "", content))
-    if not 450 <= compact_len <= 550:
-        raise ValueError(f"正文为{compact_len}字，应为450—550字")
-    if not re.search(r"[\u4e00-\u9fff]", content):
-        raise ValueError("新闻正文不是中文")
-
-    review_template = load_prompt_template("fact_audit.txt")
-    review_system = load_prompt_template("fact_audit_system.txt")
-    if not review_template or not review_system:
-        raise ValueError("缺少财经事实复核 Prompt")
-    review_prompt = review_template.format(
-        source_name=fixture.get("source_name", ""),
-        source_url=fixture.get("source_url", ""),
-        source_title=source_title,
-        source_text=source_text[:9000],
-        article_title=article.get("title", ""),
-        article_content=article.get("content", ""),
-    )
-    audit = safe_json_loads(call_llm(
-        DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-        [{"role": "system", "content": review_system},
-         {"role": "user", "content": review_prompt}], temperature=0.0, max_tokens=2200))
-    if (audit.get("passed") is not True
-            or not all(audit.get(k) is True for k in ("facts_ok", "source_ok", "title_ok"))):
-        raise ValueError("独立复核未通过：" + "; ".join(str(x) for x in audit.get("issues", [])))
     article.setdefault("keywords", ["business", "technology"])
     article.setdefault("keywords_cn", [])
     article.setdefault("summary", source_text[:100])
@@ -1103,11 +1067,8 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
         topic_title=topic.get("title", ""), topic_angle=topic.get("angle", ""),
     )
 
-    rewrite_system = load_prompt_template("rewrite_article_system.txt")
-    if not rewrite_system:
-        raise ValueError("缺少 basketball/rewrite_article_system.txt")
     messages = [
-        {"role": "system", "content": rewrite_system},
+        {"role": "system", "content": "你是NBA文章改写助手。必须保留比分、球队、球员数据和事件，只改变文风与叙述角度。"},
         {"role": "user", "content": prompt},
     ]
 
@@ -1305,6 +1266,10 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
             if not art or not isinstance(art, dict):
                 last_hint = "改写返回空结果，请确保输出完整的JSON"
                 continue
+
+            # 财经稿采用一次生成结果，不做字数、事实或二次模型复核。
+            if match_context.get("data_source") == "worldnews":
+                return art, None
 
             # Basic content check
             content = art.get("content", "")
@@ -1601,7 +1566,8 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
                        "content_type": art.get("content_type", ""),
                        "column_id": art.get("_column_id", ""),
                        "column_name": art.get("_column_name", ""),
-                       "batch_name": art.get("_batch_name", "")})
+                       "batch_name": art.get("_batch_name", ""),
+                       "micro_content": art.get("micro_content", "")})
 
     meta = {"total_articles": len(saved), "articles": saved, "topics": topics, "data_sources": {}}
     if extra:
@@ -1709,25 +1675,33 @@ def generate_emergency_article(event, match_data, index, temperature=0.8):
         "urgency_level": event.get("urgency", 70),
     }, ensure_ascii=False)
 
-    prompt_template = load_prompt_template("emergency_article.txt")
-    system_template = load_prompt_template("emergency_article_system.txt")
-    if not prompt_template or not system_template:
-        raise ValueError("缺少篮球紧急球评 Prompt")
-    values = {
-        "title_hint": title_hint,
-        "detail": detail,
-        "event_type": event_type,
-        "context_str": context_str[:2000],
-        "index": index,
-    }
-    prompt = prompt_template
-    system_prompt = system_template
-    for key, value in values.items():
-        prompt = prompt.replace("{" + key + "}", str(value))
-        system_prompt = system_prompt.replace("{" + key + "}", str(value))
+    style = "突发新闻快评风格：开篇直接冲事件核心，节奏快，短句多，像第一条推送。300-400字即可，有冲击力，有明确态度。"
+    prompt = f"""你是头条号NBA博主“岛哥侃篮球”的岛哥。刚刚发生了一件大事，需要立刻写一篇快评！
+
+⚠️ 重大事件：{title_hint}
+事件详情：{detail}
+事件类型：{event_type}
+
+背景数据：
+{context_str[:2000]}
+
+写作要求：
+{style}
+
+结构：开篇事件核心（一句话出态度）→ 快速分析为什么重要 → 收尾观点（抛给读者讨论）
+
+硬性规范：
+- 正文 300-500 字
+- 必须包含 ≥2 个 ## 二级标题
+- 文末至少1张配图标记：![配图1](images/article-{index}-img-001.jpg)
+- 态度要鲜明，不要骑墙
+
+输出JSON:
+{{"title":"标题","content":"Markdown正文","content_type":"紧急球评","event_type":"{event_type}"}}
+只输出JSON。"""
 
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": f"你是头条号NBA博主‘岛哥侃篮球’的岛哥，擅长突发事件快评。{style}只输出JSON。"},
         {"role": "user", "content": prompt}
     ]
     response = call_llm(DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL, messages,
@@ -1902,21 +1876,27 @@ def generate_prediction_article(future_matches, date_str=None):
     matches_text = "\n".join(match_lines)
     max_matches = min(len(future_matches), 8)
 
-    prompt_template = load_prompt_template("prediction_article.txt")
-    system_prompt = load_prompt_template("prediction_article_system.txt")
-    if not prompt_template or not system_prompt:
-        raise ValueError("缺少篮球赛前预测 Prompt")
-    prompt = prompt_template
-    for key, value in {
-        "date": date_str or "今日",
-        "match_count": len(future_matches),
-        "max_matches": max_matches,
-        "matches_text": matches_text,
-    }.items():
-        prompt = prompt.replace("{" + key + "}", str(value))
+    prompt = f"""你是头条号NBA博主“岛哥侃篮球”的岛哥，以犀利预测和直接分析著称。
+
+你的任务是写一篇“明日NBA赛程预测”，给出明确胜负倾向。
+今天是 {date_str or '今日'}。
+
+以下是明天的赛程（{len(future_matches)} 场），请选择最有话题性的 {max_matches} 场进行分析：
+
+{matches_text}
+
+写作要求：
+1. 每场写2-3句话，给出明确预测；NBA没有平局
+2. 语气自信但不狂妄，像老球迷在群里聊天
+3. 不编造伤病、战绩、交锋或球员数据
+4. 文末带互动问题
+
+输出纯JSON:
+{{"title":"标题","content":"Markdown正文","content_type":"热点球评"}}
+只输出JSON。"""
 
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": "你是头条号NBA博主‘岛哥侃篮球’的岛哥。预测必须明确，但不得编造数据、伤病或交锋记录。只输出JSON。"},
         {"role": "user", "content": prompt}
     ]
 

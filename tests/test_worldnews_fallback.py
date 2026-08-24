@@ -49,7 +49,7 @@ def test_worldnews_non_400_failure_switches_source(monkeypatch):
     def fake_rewrite(candidate_topic, match_context, index, source, max_retries, date_str):
         calls.append(candidate_topic["_source_article_id"])
         if candidate_topic["_source_article_id"] == "first":
-            return {}, "正文为248字，应为450—550字"
+            return {}, "LLM没有返回可用JSON"
         return {"title": candidate_topic["title"], "content": "中" * 500}, None
 
     monkeypatch.setattr(orchestrator, "_rewrite_with_retry", fake_rewrite)
@@ -60,7 +60,7 @@ def test_worldnews_non_400_failure_switches_source(monkeypatch):
     assert calls == ["first", "second"]
 
 
-def test_finance_article_translates_and_enforces_chinese_length(monkeypatch):
+def test_finance_article_uses_single_rewrite_result(monkeypatch):
     content = "中" * 500
     responses = iter([
         json.dumps({"article": {
@@ -69,14 +69,8 @@ def test_finance_article_translates_and_enforces_chinese_length(monkeypatch):
             "content": content,
             "summary": "市场消息",
             "keywords": ["gold market"],
+            "micro_content": "黄金市场出现变化。\n#财经新闻#",
         }}, ensure_ascii=False),
-        json.dumps({
-            "passed": True,
-            "facts_ok": True,
-            "source_ok": True,
-            "title_ok": True,
-            "issues": [],
-        }, ensure_ascii=False),
     ])
     monkeypatch.setattr(orchestrator, "call_llm", lambda *args, **kwargs: next(responses))
     topic = {"title": "Gold market update", "content_type": "海外商业"}
@@ -94,10 +88,11 @@ def test_finance_article_translates_and_enforces_chinese_length(monkeypatch):
 
     assert article["title"] == "金价上涨背后的市场变化"
     assert len(article["content"]) == 500
+    assert article["micro_content"].startswith("黄金市场")
     assert article["source_verbatim"] is False
 
 
-def test_finance_article_rejects_body_outside_target_length(monkeypatch):
+def test_finance_article_accepts_any_generated_length_without_audit(monkeypatch):
     result = {"article": {
         "title": "中文新闻标题",
         "backup_title": "中文备选标题",
@@ -110,8 +105,8 @@ def test_finance_article_rejects_body_outside_target_length(monkeypatch):
         lambda *args, **kwargs: json.dumps(result, ensure_ascii=False),
     )
 
-    with pytest.raises(ValueError, match="450—550"):
-        orchestrator._rewrite_finance_article(
-            {"title": "Business update", "content_type": "海外商业"},
-            {"article_text": "English source " * 30, "fixture": {"source": "worldnews"}},
-        )
+    article = orchestrator._rewrite_finance_article(
+        {"title": "Business update", "content_type": "海外商业"},
+        {"article_text": "English source " * 30, "fixture": {"source": "worldnews"}},
+    )
+    assert len(article["content"]) == 449

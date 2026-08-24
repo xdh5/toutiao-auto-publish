@@ -51,15 +51,10 @@ def test_collector_loads_only_selected_business(app, forbidden_module):
     assert result.returncode == 0, result.stderr
 
 
-def test_basketball_micro_uses_basketball_length_and_question(monkeypatch):
-    monkeypatch.setattr(micro_publisher, "CONTENT_APP", "basketball")
-    valid = ("这是一段只使用原文事实的篮球评论，球队在比赛中展现了稳定执行力，关键回合的选择也让比赛走势更加清楚。" * 4)[:230]
-    valid += "你怎么看这场比赛？\n#NBA#"
-    micro_publisher._validate_content(valid, valid)
+def test_micro_publisher_has_no_independent_llm_or_validation_gate():
+    import inspect
 
-
-def test_finance_micro_keeps_finance_length(monkeypatch):
-    monkeypatch.setattr(micro_publisher, "CONTENT_APP", "finance")
-    valid = ("这是一段客观清楚的财经新闻说明，所有人物机构数字日期和事件都来自正篇，没有增加原文之外的具体事实。" * 5)[:260]
-    valid += "\n#财经新闻#"
-    micro_publisher._validate_content(valid, valid)
+    source = inspect.getsource(micro_publisher.generate_draft)
+    assert "call_llm" not in source
+    assert "_validate_content" not in source
+    assert "micro_content" in source
