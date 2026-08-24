@@ -3,6 +3,7 @@ import json
 import pytest
 
 import app.orchestrator as orchestrator
+from app.validator import check_cross_day_duplicate
 
 
 @pytest.mark.parametrize("data_source", ["worldnews", "zhibo8"])
@@ -15,10 +16,18 @@ def test_rewrite_retries_cross_day_duplicate_for_finance_and_basketball(
     }, ensure_ascii=False), encoding="utf-8")
     monkeypatch.setattr(orchestrator, "OUTPUT_DIR", tmp_path)
 
-    generated = iter([
-        {"title": "这是一条过去已经发布过的相同新闻标题", "content": "旧内容" * 200},
-        {"title": "今天出现的全新话题不会和旧标题重复", "content": "新内容" * 200},
-    ])
+    if data_source == "worldnews":
+        generated = iter([
+            {"title": "这是一条过去已经发布过的相同新闻标题",
+             "content": "旧" * 500, "micro_content": "短" * 250},
+            {"title": "今天出现的全新话题不会和旧标题重复",
+             "content": "新" * 500, "micro_content": "短" * 250},
+        ])
+    else:
+        generated = iter([
+            {"title": "这是一条过去已经发布过的相同新闻标题", "content": "旧内容" * 200},
+            {"title": "今天出现的全新话题不会和旧标题重复", "content": "新内容" * 200},
+        ])
     calls = []
 
     def fake_rewrite(*args, **kwargs):
@@ -47,10 +56,8 @@ def test_cross_day_duplicate_checks_saved_content_prefix(tmp_path, monkeypatch):
     (previous / "metadata.json").write_text(json.dumps({
         "articles": [{"title": "完全不同的旧标题示例", "content": shared}],
     }, ensure_ascii=False), encoding="utf-8")
-    monkeypatch.setattr(orchestrator, "OUTPUT_DIR", tmp_path)
-
-    duplicated, matched, score = orchestrator.check_cross_day_duplicate(
-        "今天另一条完全不同的新标题", shared, "2026-08-24")
+    duplicated, matched, score = check_cross_day_duplicate(
+        "今天另一条完全不同的新标题", shared, "2026-08-24", tmp_path)
 
     assert duplicated is True
     assert matched == "完全不同的旧标题示例"

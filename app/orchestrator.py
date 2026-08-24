@@ -1088,163 +1088,9 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
     return article
 
 
-def check_rewrite_fidelity(source_fixture, rewritten_article):
-    """检查改写文是否忠实于来源文章。
-
-    对比关键事实（比分、球员名、球队名）是否被改动。
-    返回 (passed, issues)。
-    """
-    issues = []
-    content = rewritten_article.get("content", "") + rewritten_article.get("title", "")
-    source_text = source_fixture.get("article_text", "")
-
-    # 检查1：比分一致
-    # 注意：用 any() 而非 all()，因为内容中可能包含日期"2026-07-03"等
-    # 会被 (\d+)[:-](\d+) 误匹配为假比分。只要正确比分出现一次即通过。
-    expected_hg = source_fixture.get("home_score")
-    expected_ag = source_fixture.get("away_score")
-    if expected_hg is not None and expected_ag is not None:
-        found_scores = re.findall(r'(\d+)[:-](\d+)', content)
-        if found_scores:
-            score_ok = any(
-                (int(a) == expected_hg and int(b) == expected_ag) or
-                (int(a) == expected_ag and int(b) == expected_hg)
-                for a, b in found_scores
-            )
-            if not score_ok:
-                issues.append(f"比分不一致: 来源 {expected_hg}-{expected_ag}")
-
-    # 检查2：结构化球员数据不能在改写中被篡改。
-    player_stats = source_fixture.get("player_stats", [])
-    for stat in player_stats:
-        player = stat.get("player", "")
-        if player and player in source_text and player not in content:
-            issues.append(f"缺少球员: {player}")
-
-    known_triple_double = any(
-        sum(1 for key in ("points", "rebounds", "assists") if (stat.get(key) or 0) >= 10) >= 3
-        for stat in player_stats
-    )
-    banned_patterns = [
-        (r'三双', '新增编造: 三双'),
-        (r'准三双', '新增编造: 准三双'),
-        (r'命中\d+记三分', '新增编造: 三分命中数'),
-        (r'第[一二三四]节.*?\d+分', '新增编造: 单节得分'),
-    ]
-    for pattern, desc in banned_patterns:
-        if not re.search(pattern, content):
-            continue
-        if pattern == r'三双' and known_triple_double:
-            continue
-        # 退回到字面比对：仅当 source_text 也没有时才判定为编造
-        if re.search(pattern, source_text):
-            continue  # 源文章本身用了这个词，没问题
-        issues.append(desc)
-
-    return len(issues) == 0, issues
-
-
-def validate_article_vs_match_data(source_fixture, rewritten_article):
-    """验证改写文中的关键比赛信息是否与结构化比赛数据一致。
-
-    与 check_rewrite_fidelity 不同，此函数直接对比比赛数据（而非源文章），
-    可检测 LLM 编造的、源文章中也不存在的虚假细节。
-    返回 (passed, issues)。
-    """
-    issues = []
-    content = rewritten_article.get("content", "") + rewritten_article.get("title", "")
-
-    ht = source_fixture.get("home_team", "")
-    at = source_fixture.get("away_team", "")
-    hg = source_fixture.get("home_score")
-    ag = source_fixture.get("away_score")
-
-    # 检查1：主客队名出现在文中
-    if ht and ht not in content:
-        issues.append(f"缺少主队名: {ht}")
-    if at and at not in content:
-        issues.append(f"缺少客队名: {at}")
-
-    # 检查2：比分一致性（加强版 regex，排除假匹配）
-    if hg is not None and ag is not None:
-        score_found = False
-        for m in re.finditer(r'(\d+)\s*[-–:]\s*(\d+)', content):
-            a, b = int(m.group(1)), int(m.group(2))
-            if (a == hg and b == ag) or (a == ag and b == hg):
-                score_found = True
-                break
-        if not score_found:
-            # 宽松检查：检查是否有单数字比分表示
-            if f"{hg}-{ag}" not in content.replace(" ", "").replace(" ", ""):
-                issues.append(f"比分不一致: 比赛数据 {ht} {hg}-{ag} {at}，但文中未出现该比分")
-
-    # 检查3：对已提取的得分、篮板、助攻逐项验证。
-    for stat in source_fixture.get("player_stats", []):
-        player = stat.get("player", "")
-        if not player:
-            continue
-        for key, label in (("points", "分"), ("rebounds", "篮板"), ("assists", "助攻")):
-            expected = stat.get(key)
-            if expected is None:
-                continue
-            claim = re.search(rf'{re.escape(player)}[^。；]{{0,25}}?(\d{{1,2}}){label}', content)
-            if claim and int(claim.group(1)) != expected:
-                issues.append(f"{player}{label}不一致: 数据为{expected}，文中为{claim.group(1)}")
-
-    return len(issues) == 0, issues
-
-
 # ============================================================
 # Quality Validation & Retry
 # ============================================================
-
-def check_cross_day_duplicate(title, content, date_str):
-    """Check if the generated article is too similar to any article in the past 7 days.
-
-    Returns (is_duplicate, matched_title, similarity_score).
-    Uses title substring overlap and longest-common-subsequence ratio.
-    """
-    from difflib import SequenceMatcher
-
-    today = datetime.strptime(date_str, "%Y-%m-%d")
-    for i in range(1, 8):
-        dt = today - timedelta(days=i)
-        meta_path = OUTPUT_DIR / dt.strftime("%Y-%m-%d") / "metadata.json"
-        if not meta_path.exists():
-            continue
-        try:
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            for a in meta.get("articles", []):
-                hist_title = a.get("title", "")
-                if not hist_title or len(hist_title) < 8:
-                    continue
-
-                # Check 1: long common substring (15+ chars) = likely duplicate
-                shorter = title if len(title) <= len(hist_title) else hist_title
-                longer = hist_title if len(title) <= len(hist_title) else title
-                for start in range(len(shorter) - 14):
-                    sub = shorter[start:start + 15]
-                    if sub in longer:
-                        return True, hist_title, 100
-
-                # Check 2: title similarity via SequenceMatcher
-                title_ratio = SequenceMatcher(None, title[:40], hist_title[:40]).ratio()
-                if title_ratio > 0.65:
-                    return True, hist_title, round(title_ratio * 100)
-
-                # Check 3: content overlap — first 100 chars of new vs old content
-                hist_content = a.get("content", "")
-                if hist_content and len(content) > 50 and len(hist_content) > 50:
-                    content_ratio = SequenceMatcher(
-                        None, content[:100], hist_content[:100]).ratio()
-                    if content_ratio > 0.7:
-                        return True, hist_title, round(content_ratio * 100)
-
-        except Exception:
-            pass
-
-    return False, "", 0
-
 
 def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_str):
     """Rewrite a verified source article with retry on fidelity failure.
@@ -1269,16 +1115,24 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
 
             content = str(art.get("content", ""))
             if date_str:
+                from .validator import check_cross_day_duplicate
                 duplicated, matched_title, similarity = check_cross_day_duplicate(
-                    str(art.get("title", "")), content, date_str)
+                    str(art.get("title", "")), content, date_str, OUTPUT_DIR)
                 if duplicated:
                     last_hint = f"与过去7天文章《{matched_title}》相似度{similarity}%"
                     if attempt < max_retries:
                         continue
                     return {}, f"跨日重复: {last_hint}"
 
-            # 财经稿采用一次生成结果，不做字数、事实或二次模型复核。
+            # 财经稿不调用第二个模型，只用程序核对字数和数字。
             if match_context.get("data_source") == "worldnews":
+                from .finance.validator import validate_article
+                finance_passed, finance_issues = validate_article(fixture, art)
+                if not finance_passed:
+                    last_hint = "; ".join(finance_issues)
+                    if attempt < max_retries:
+                        continue
+                    return {}, f"财经程序复核未通过: {last_hint}"
                 return art, None
 
             # Basic content check
@@ -1292,7 +1146,8 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
                 continue
 
             # Fidelity check: verify facts preserved
-            passed, issues = check_rewrite_fidelity(fixture, art)
+            from .basketball.validator import validate_match_data, validate_source_fidelity
+            passed, issues = validate_source_fidelity(fixture, art)
             if not passed:
                 last_hint = "; ".join(issues)
                 if attempt < max_retries:
@@ -1300,7 +1155,7 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
                 return {}, f"改写不忠实: {last_hint}"
 
             # 第二层验证：防止改写文编造比赛数据中不存在的事件
-            match_passed, match_issues = validate_article_vs_match_data(fixture, art)
+            match_passed, match_issues = validate_match_data(fixture, art)
             if not match_passed:
                 last_hint = "; ".join(match_issues)
                 if attempt < max_retries:
