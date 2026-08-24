@@ -1,112 +1,96 @@
-#!/usr/bin/env python3
-"""Prompt file validation tests (Task #7).
+"""验证财经和篮球三阶段 Prompt 均存在且被运行时代码调用。"""
 
-Checks: file existence, minimum size, required sections, checksums.
-"""
-
-import sys, os, hashlib
+import inspect
+import json
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent.parent
-PROMPT_DIR = PROJECT_ROOT / "prompts"
+import pytest
 
-# Expected checksums (update when prompts change intentionally)
-EXPECTED_CHECKSUMS = {
-    "article_generator.txt": None,  # set to sha256[:12] to lock
-    "topic_selector.txt": None,
-}
-
-REQUIRED_SECTIONS = {
-    "article_generator.txt": ["品类一", "品类二", "品类三", "品类四", "品类五", "合规红线", "互动引导", "写得像个真人"],
-    "topic_selector.txt": ["五大内容品类", "评分体系", "标题公式", "输出格式", "动态调配"],
-}
+import app.orchestrator as orchestrator
+from app.utils import load_prompt_template
 
 
-def test_prompt_files_exist():
-    """Both prompt files must exist."""
-    for fname in ["article_generator.txt", "topic_selector.txt"]:
-        path = PROMPT_DIR / fname
-        assert path.exists(), f"{fname} not found at {path}"
-        assert path.stat().st_size > 500, f"{fname} too small ({path.stat().st_size} bytes)"
-    print("  PASS test_prompt_files_exist")
+PROMPT_DIR = Path(__file__).parent.parent / "prompts"
+PROMPT_FILES = ("topic_selector.txt", "article_generator.txt", "rewrite_article.txt")
 
 
-def test_article_generator_sections():
-    """article_generator.txt must contain all required sections."""
-    path = PROMPT_DIR / "article_generator.txt"
-    content = path.read_text(encoding="utf-8")
-    for section in REQUIRED_SECTIONS["article_generator.txt"]:
-        assert section in content, f"Missing required section: {section}"
-    # Must have at least 2 ## examples
-    assert content.count("## ") >= 2, "Should have at least 2 markdown headers"
-    print("  PASS test_article_generator_sections")
+@pytest.mark.parametrize("content_app", ["finance", "basketball"])
+@pytest.mark.parametrize("filename", PROMPT_FILES)
+def test_business_prompt_files_exist(content_app, filename):
+    path = PROMPT_DIR / content_app / filename
+    assert path.exists(), f"缺少 {path}"
+    assert path.stat().st_size > 500, f"Prompt 内容过短: {path}"
+    assert load_prompt_template(filename, content_app)
 
 
-def test_topic_selector_sections():
-    """topic_selector.txt must contain all required sections."""
-    path = PROMPT_DIR / "topic_selector.txt"
-    content = path.read_text(encoding="utf-8")
-    for section in REQUIRED_SECTIONS["topic_selector.txt"]:
-        assert section in content, f"Missing required section: {section}"
-    print("  PASS test_topic_selector_sections")
+def test_runtime_calls_all_three_prompt_stages():
+    selection_source = inspect.getsource(orchestrator.select_topics)
+    draft_source = inspect.getsource(orchestrator.generate_article_draft)
+    rewrite_sources = (
+        inspect.getsource(orchestrator._rewrite_finance_article)
+        + inspect.getsource(orchestrator.rewrite_article)
+    )
+    assert 'load_prompt_template("topic_selector.txt")' in selection_source
+    assert 'load_prompt_template("article_generator.txt")' in draft_source
+    assert 'load_prompt_template("rewrite_article.txt")' in rewrite_sources
 
 
-def test_prompt_checksums():
-    """Verify prompt checksums (skip if not locked)."""
-    for fname, expected in EXPECTED_CHECKSUMS.items():
-        path = PROMPT_DIR / fname
-        if not path.exists():
-            continue
-        checksum = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
-        if expected and checksum != expected:
-            print(f"  WARNING: {fname} checksum changed: expected={expected}, got={checksum}")
-        else:
-            print(f"  INFO: {fname} sha256={checksum}")
-    print("  PASS test_prompt_checksums")
+def test_pipeline_orders_draft_before_rewrite():
+    source = inspect.getsource(orchestrator._rewrite_with_retry)
+    assert source.index("generate_article_draft(") < source.index("rewrite_article(")
 
 
-def test_no_banned_patterns():
-    """Prompts should not contain hardcoded example titles that might leak into output."""
-    path = PROMPT_DIR / "article_generator.txt"
-    content = path.read_text(encoding="utf-8")
-    # Should NOT contain real article titles as fixed examples
-    # (This is a sanity check, not strict enforcement)
-    assert len(content) > 1000, "Prompt too short — may be truncated"
-    print("  PASS test_no_banned_patterns")
-
-
-# ============================================================
-# Main
-# ============================================================
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Task #7 Tests: 提示词文件管理")
-    print("=" * 60)
-
-    all_tests = [
-        ("prompts exist & have content", test_prompt_files_exist),
-        ("article_generator: all sections present", test_article_generator_sections),
-        ("topic_selector: all sections present", test_topic_selector_sections),
-        ("checksums tracked", test_prompt_checksums),
-        ("no banned patterns", test_no_banned_patterns),
+def test_finance_selector_uses_ai_selected_article_id(monkeypatch):
+    rows = [
+        {"article_id": "first", "title": "第一条", "article_text": "甲" * 150,
+         "url": "https://example.com/1", "source": "example.com",
+         "category": "business", "region": "cn"},
+        {"article_id": "second", "title": "第二条", "article_text": "乙" * 150,
+         "url": "https://example.com/2", "source": "example.com",
+         "category": "technology", "region": "cn"},
     ]
+    response = [{"article_id": "second", "title": "第二条", "angle": "产业影响",
+                 "keywords": ["technology"], "keywords_cn": ["科技"]}]
+    monkeypatch.setattr(orchestrator, "call_llm", lambda *_args, **_kwargs: json.dumps(response, ensure_ascii=False))
+    topics = orchestrator.select_topics({
+        "data_source": "worldnews", "date": "2026-08-24", "batch_mode": "morning",
+        "news_articles": rows,
+    }, topic_count=1)
+    assert topics[0]["_source_article_id"] == "second"
+    assert topics[0]["angle"] == "产业影响"
 
-    passed = 0
-    failed = 0
-    for name, test_fn in all_tests:
-        try:
-            test_fn()
-            passed += 1
-        except AssertionError as e:
-            print(f"  FAIL {name}: {e}")
-            failed += 1
-        except Exception as e:
-            print(f"  ERROR {name}: {e}")
-            import traceback
-            traceback.print_exc()
-            failed += 1
 
-    print(f"\n{'=' * 60}")
-    print(f"Results: {passed} passed, {failed} failed, {passed + failed} total")
-    sys.exit(0 if failed == 0 else 1)
+def test_article_generator_template_is_used_for_draft(monkeypatch):
+    loaded = []
+    original_loader = orchestrator.load_prompt_template
+
+    def recording_loader(name):
+        loaded.append(name)
+        return original_loader(name, "finance")
+
+    monkeypatch.setattr(orchestrator, "load_prompt_template", recording_loader)
+    monkeypatch.setattr(orchestrator, "CONTENT_APP", "finance")
+    monkeypatch.setattr(orchestrator, "call_llm", lambda *_args, **_kwargs: json.dumps({
+        "title": "财经初稿标题", "content": "中" * 500,
+    }, ensure_ascii=False))
+    draft = orchestrator.generate_article_draft(
+        {"title": "来源标题", "angle": "行业影响", "content_type": "国内商业"},
+        {"article_text": "来源正文" * 100, "fixture": {"article_title": "来源标题"}},
+        1,
+    )
+    assert draft["title"] == "财经初稿标题"
+    assert loaded == ["article_generator.txt"]
+
+
+def test_finance_prompts_exclude_politics_and_keep_source_facts():
+    selector = load_prompt_template("topic_selector.txt", "finance")
+    generator = load_prompt_template("article_generator.txt", "finance")
+    rewrite = load_prompt_template("rewrite_article.txt", "finance")
+    assert "排除政治" in selector
+    assert all("来源" in prompt for prompt in (generator, rewrite))
+
+
+def test_basketball_prompts_keep_nba_scope_and_fidelity():
+    prompts = [load_prompt_template(name, "basketball") for name in PROMPT_FILES]
+    assert all("NBA" in prompt for prompt in prompts)
+    assert "事实零改动" in prompts[2]

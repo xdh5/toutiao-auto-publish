@@ -88,7 +88,7 @@ def test_dedup_prompt_has_core_subject_rule():
 def test_topic_selector_file_has_dedup_rule():
     """topic_selector.txt must include intra-batch dedup in 禁止选题 section."""
     from app.utils import load_prompt_template
-    tmpl = load_prompt_template("topic_selector.txt")
+    tmpl = load_prompt_template("topic_selector.txt", "basketball")
     assert "同一批次" in tmpl, "topic_selector.txt must mention intra-batch dedup"
     assert "核心关键词" in tmpl, "topic_selector.txt must mention core keyword diversity"
     print("  PASS test_topic_selector_file_has_dedup_rule")

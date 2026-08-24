@@ -10,13 +10,18 @@ from pathlib import Path
 PROMPT_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
 
-def load_prompt_template(name):
-    """Load a prompt template from prompts/{name}, stripping header comments.
+def load_prompt_template(name, content_app=None):
+    """Load prompts/{finance|basketball}/{name}, stripping header comments.
 
     Header lines (starting with #) contain version metadata and are stripped.
     The body is returned as the prompt content.
     """
-    path = PROMPT_DIR / name
+    if content_app is None:
+        from .constants import CONTENT_APP
+        content_app = CONTENT_APP
+    if content_app not in {"finance", "basketball"}:
+        raise ValueError(f"未知 Prompt 业务: {content_app}")
+    path = PROMPT_DIR / content_app / name
     if not path.exists():
         return ""
     lines = path.read_text(encoding="utf-8").split("\n")

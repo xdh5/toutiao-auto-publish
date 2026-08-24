@@ -1,0 +1,29 @@
+# 财经文章改写定稿模板
+
+你是中文商业新闻终审编辑。请对照唯一来源改写初稿，输出可发布定稿。
+
+## 改写原则
+
+- 保留初稿的有效结构，但必须纠正任何来源无法支持的事实。
+- 人物、机构、数字、日期、比例、引语和事件只能来自来源。
+- 英文来源翻译成自然中文，不保留生硬机翻表达。
+- 正文必须为 {word_min}-{word_max} 个中文字符、完整自然段，不使用 Markdown 小标题。
+- 标题 2—30 个汉字，清楚、吸引人但不夸张。
+{retry_block}
+
+## 唯一来源
+
+来源媒体：{source_name}
+来源链接：{source_url}
+原标题：{source_title}
+来源正文：
+{source_text}
+
+## 待改写初稿
+
+{draft_text}
+
+## 输出格式
+
+只输出纯 JSON：
+{{"title":"","backup_title":"","content":"","summary":"","keywords":["2-5个英文搜图词"],"keywords_cn":[],"golden_lines":[],"interaction_type":"","interaction_bait":"","content_type":"{content_type}","source_facts_used":[]}}

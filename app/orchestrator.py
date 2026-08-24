@@ -436,17 +436,61 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
         offset = 2 if match_data.get("data_source") == "worldnews" and match_data.get("batch_mode") == "evening" else 0
         prior_titles = set(cross_batch_covered.get("titles", set())) if cross_batch_covered else set()
         candidates = [art for art in match_data.get("news_articles", []) if art.get("title") not in prior_titles]
-        for art in candidates[offset:offset + topic_count]:
+        candidates = candidates[offset:]
+        source_lines = []
+        by_id = {}
+        for art in candidates:
+            article_id = str(art.get("article_id") or art.get("url") or "")
+            by_id[article_id] = art
+            source_lines.append(
+                f"article_id={article_id}\n标题={art.get('title','')}\n"
+                f"类别={art.get('category','business')} 地区={art.get('region','cn')} "
+                f"来源={art.get('source','')}\n摘要={str(art.get('article_text',''))[:350]}"
+            )
+        template = load_prompt_template("topic_selector.txt")
+        history = " | ".join(sorted(prior_titles)[:10]) or "无"
+        prompt = template.format(
+            topic_count=topic_count, date=match_data.get("date", ""),
+            batch_mode=match_data.get("batch_mode", ""), history=history,
+            source_list="\n\n".join(source_lines),
+        )
+        selected = None
+        for attempt in range(3):
+            try:
+                selected = safe_json_loads(call_llm(
+                    DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL,
+                    [{"role": "system", "content": "严格从候选素材选择财经话题，只输出JSON。"},
+                     {"role": "user", "content": prompt}],
+                    temperature=0.2, max_tokens=3000))
+                break
+            except (ValueError, requests.RequestException) as exc:
+                if attempt == 2:
+                    print(f"   ⚠️ 财经AI选题失败，按素材顺序回退: {exc}")
+        if isinstance(selected, dict):
+            selected = [selected]
+        ordered = []
+        selection_by_id = {}
+        for item in selected if isinstance(selected, list) else []:
+            article_id = str(item.get("article_id") or "")
+            art = by_id.get(article_id)
+            if art and art not in ordered:
+                ordered.append(art)
+                selection_by_id[article_id] = item
+        ordered.extend(art for art in candidates if art not in ordered)
+        for art in ordered[:topic_count]:
             category = art.get("category", "business")
             region = art.get("region", "cn")
             content_type = art.get("_content_type_hint") or ("科技动态" if category == "technology" else ("海外商业" if region == "overseas" else "国内商业"))
             image_keywords = (["technology", "innovation", "digital business"] if category == "technology"
                               else ["business", "company", "manufacturing"])
-            topics.append({"title": art.get("title", ""), "angle": "严格依据原文",
-                           "keywords": image_keywords, "keywords_cn": [],
+            picked = selection_by_id.get(str(art.get("article_id") or art.get("url") or ""), {})
+            topics.append({"title": art.get("title", ""),
+                           "angle": picked.get("angle", "严格依据原文"),
+                           "keywords": picked.get("keywords") or image_keywords,
+                           "keywords_cn": picked.get("keywords_cn") or [],
                            "content_type": content_type, "score": 100,
                            "_source_article_id": art.get("article_id"), "_finance": True})
-        print(f"\n[2/5] 财经选题：{len(topics)} 条")
+        print(f"\n[2/5] 财经AI选题：{len(topics)} 条")
         return topics
     print(f"\n[2/5] 千问话题筛选 (target={topic_count}篇)...")
     lines = []
@@ -567,7 +611,8 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
 [{{"title": "标题(15-25字)", "angle": "切入角度+明确态度", "keywords": ["英文关键词"], "keywords_cn": ["中文关键词"], "content_type": "热点球评/交易资讯/排行榜/八卦趣事/战术解析", "score": 90, "controversy_level": "high/medium/low", "target_emotion": "愤怒/骄傲/怀旧/震惊/感动/好奇", "why_pick": "为什么选这个角度(20字)"}}]
 只输出JSON。"""
 
-    topic_selector_prompt = load_prompt_template("topic_selector.txt")
+    topic_selector_prompt = load_prompt_template("topic_selector.txt").replace(
+        "{topic_count}", str(topic_count))
     if not topic_selector_prompt:
         topic_selector_prompt = "你是头条号NBA博主'球评人老六'，有态度、有人味、不骑墙。严格按素材选题，只输出JSON。"
 
@@ -939,25 +984,68 @@ def _is_http_400_error(error):
     return bool(error and re.search(r"(?:HTTP(?:Error)?[^\n]*\b400\b|\b400 Client Error\b)", str(error), re.I))
 
 
-def _rewrite_finance_article(topic, source, retry_hint=""):
+def _article_writing_context(topic):
+    """Return the common style and length fields consumed by both prompt stages."""
+    if CONTENT_APP == "finance":
+        return "客观、清楚、自然的中文商业新闻", 450, 550
+    style_guide = {
+        "热点球评": "像赛后和球友复盘，观点鲜明但事实克制。",
+        "交易资讯": "像球迷群聊交易，区分官宣、报道和流言。",
+        "八卦趣事": "聚焦真实细节和画面，不虚构人物动机。",
+    }
+    word_range = topic.get("_word_count_range", [500, 800])
+    word_min = word_range[0] if isinstance(word_range, (list, tuple)) else 500
+    word_max = word_range[1] if isinstance(word_range, (list, tuple)) and len(word_range) > 1 else word_min + 200
+    return style_guide.get(topic.get("content_type"), "自然口语化中文写作"), word_min, word_max
+
+
+def generate_article_draft(topic, source, index, retry_hint=""):
+    """Stage 2: use the business-specific article_generator template to create a draft."""
+    fixture = source.get("fixture") or {}
+    style, word_min, word_max = _article_writing_context(topic)
+    template = load_prompt_template("article_generator.txt")
+    if not template:
+        raise ValueError(f"缺少 {CONTENT_APP}/article_generator.txt")
+    prompt = template.format(
+        topic_title=topic.get("title", ""), topic_angle=topic.get("angle", ""),
+        content_type=topic.get("content_type", ""), style=style,
+        word_min=word_min, word_max=word_max, index=index,
+        source_title=fixture.get("article_title") or topic.get("title", ""),
+        source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
+        source_text=str(source.get("article_text") or "")[:9000],
+        retry_block=("上次失败：" + retry_hint) if retry_hint else "",
+    )
+    result = safe_json_loads(call_llm(
+        DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL,
+        [{"role": "system", "content": "根据唯一来源生成完整文章初稿，只输出JSON。"},
+         {"role": "user", "content": prompt}],
+        temperature=0.3 if CONTENT_APP == "finance" else 0.6, max_tokens=6000))
+    draft = result.get("article") if isinstance(result, dict) and isinstance(result.get("article"), dict) else result
+    if not isinstance(draft, dict) or not draft.get("content"):
+        raise ValueError("article_generator 未返回完整初稿")
+    print(f"   初稿完成: {draft.get('title','?')}, {len(str(draft.get('content','')))}字")
+    return draft
+
+
+def _rewrite_finance_article(topic, source, draft, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
     source_title = fixture.get("article_title") or topic.get("title", "")
-    length_rule = "无论来源长短或语言，都要写成450—550个实际中文字符的完整中文新闻正文。由于模型常低估字数，写作时请按内部目标600—700字准备素材，最终输出必须写成7个完整自然段，每段约70—80个实际中文字符，不使用Markdown小标题。英文素材必须准确翻译为自然中文，标题也必须是2—30个汉字的中文标题。第一段概括核心消息，中间五段依次解释来源中的主要事实、数据、关系和背景，最后一段说明这条消息对普通读者理解相关行业或市场的意义。来源较短时可以加入不含新人物、新机构、新数字和新事件的常识性解释与分析，但不得编造具体事实或引语；来源较长时压缩到规定字数。输出前逐字计算，实际少于450字或超过550字都禁止结束。"
-    prompt = f"""你是中国商业新闻编辑。素材已属于business或technology。
-{length_rule}
-具体数字、人物、机构、日期、引语和事件只能来自素材；允许加入不含新增具体事实的常识性解释和分析。{('上次失败：' + retry_hint) if retry_hint else ''}
-article必须返回完整对象，禁止返回null。
-只输出JSON：{{"article":{{"title":"","backup_title":"","content":"","summary":"","keywords":["2-5个英文搜图词"],"keywords_cn":[],"golden_lines":[],"interaction_type":"","interaction_bait":"","content_type":"{topic.get('content_type','国内商业')}"}}}}
-来源媒体：{fixture.get('source_name','')}
-来源链接：{fixture.get('source_url','')}
-原标题：{source_title}
-来源正文：{source_text[:9000]}"""
+    template = load_prompt_template("rewrite_article.txt")
+    if not template:
+        raise ValueError("缺少 finance/rewrite_article.txt")
+    prompt = template.format(
+        word_min=450, word_max=550, content_type=topic.get("content_type", "国内商业"),
+        source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
+        source_title=source_title, source_text=source_text[:9000],
+        draft_text=json.dumps(draft, ensure_ascii=False),
+        retry_block=("上次失败：" + retry_hint) if retry_hint else "",
+    )
     first = safe_json_loads(call_llm(
         DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-        [{"role": "system", "content": "你是严谨的内容编辑，只输出JSON。"},
+        [{"role": "system", "content": "对照唯一来源改写初稿并输出定稿，只输出JSON。"},
          {"role": "user", "content": prompt}], temperature=0.1, max_tokens=5000))
-    generated = first.get("article")
+    generated = first.get("article") if isinstance(first, dict) and isinstance(first.get("article"), dict) else first
     if not isinstance(generated, dict):
         raise ValueError("千问未返回article")
     article = dict(generated)
@@ -1014,7 +1102,7 @@ article必须返回完整对象，禁止返回null。
     return article
 
 
-def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="", date_str="", source=None):
+def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="", date_str="", source=None, draft=None):
     """将已核实的源文章改写为老六风格。
 
     输入：来自直播吧/懂球帝的记者核实报道
@@ -1029,14 +1117,14 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
         return None
 
     if match_context.get("data_source") == "worldnews":
-        print(f"\n[3.{index}] [财经审核改写] {topic['title'][:40]}...")
-        return _rewrite_finance_article(topic, source, retry_hint=retry_hint)
+        print(f"\n[4.{index}] [财经改写定稿] {topic['title'][:40]}...")
+        return _rewrite_finance_article(topic, source, draft or {}, retry_hint=retry_hint)
 
     source_text = source["article_text"]
     fixture = source["fixture"]
 
     content_type = topic.get("content_type", "热点球评")
-    print(f"\n[3.{index}] [改写-{content_type}] {topic['title'][:40]}...")
+    print(f"\n[4.{index}] [改写定稿-{content_type}] {topic['title'][:40]}...")
 
     # 风格引导
     style_guide = {
@@ -1059,22 +1147,9 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
     if retry_hint:
         retry_block = f"\n⚠️ 上次改写失败！问题：{retry_hint}\n这次必须修正。\n"
 
-    # 加载 prompt 模板
-    prompt_template_path = os.path.join(os.path.dirname(__file__), "prompts", "rewrite_article.txt")
-    base_prompt = ""
-    if os.path.exists(prompt_template_path):
-        with open(prompt_template_path, "r", encoding="utf-8") as f:
-            base_prompt = f.read()
-
+    base_prompt = load_prompt_template("rewrite_article.txt")
     if not base_prompt:
-        base_prompt = f"""你是头条号NBA博主"球评人老六"。今天的任务是将一篇真实的NBA新闻报道改写成你的个人风格。
-
-## 核心原则
-1. 事实零改动：来源文章中的所有比分、球队名、球员名、关键事件必须完全保留。
-2. 风格全换：把原文的客观新闻报道语气 → 老六的个人风格。
-3. 结构重组：用自己的叙事重新组织。
-
-输出JSON: {{{{ "title": "标题(15-25字)", "content": "Markdown正文({word_min}-{word_max}字，含≥2个##小标题)", "summary": "摘要", "keywords": [], "keywords_cn": [], "golden_lines": [], "interaction_type": "共鸣式", "interaction_bait": "互动问题", "content_type": "{content_type}" }}}}"""
+        raise ValueError("缺少 basketball/rewrite_article.txt")
 
     prompt = base_prompt.format(
         source_text=source_text[:3000],
@@ -1085,6 +1160,10 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
         index=index,
         column_block=column_block,
         retry_block=retry_block,
+        source_title=fixture.get("article_title") or topic.get("title", ""),
+        source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
+        draft_text=json.dumps(draft or {}, ensure_ascii=False),
+        topic_title=topic.get("title", ""), topic_angle=topic.get("angle", ""),
     )
 
     messages = [
@@ -1280,9 +1359,11 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
     for attempt in range(max_retries + 1):
         temp = max(0.3, 0.5 - attempt * 0.1)
         try:
+            print(f"\n[3.{index}] [生成初稿] {topic.get('title','')[:40]}...")
+            draft = generate_article_draft(topic, source, index, retry_hint=last_hint)
             art = rewrite_article(topic, match_context, index, temperature=temp,
                                   retry_hint=last_hint, date_str=date_str or "",
-                                  source=source)
+                                  source=source, draft=draft)
             if not art or not isinstance(art, dict):
                 last_hint = "改写返回空结果，请确保输出完整的JSON"
                 continue
@@ -2060,18 +2141,18 @@ def main():
             )
             print(f"   🧹 财经素材去重: {before_count} → {len(match_data['news_articles'])} 篇")
 
-        if CONTENT_APP == "basketball" and article_count == 1:
+        # 两个业务都先走各自的 topic_selector Prompt；篮球在模型没有返回
+        # 可用选题时才按原始新闻顺序回退，避免单篇任务因偶发空响应停发。
+        topics = select_topics(match_data, topic_history=topic_history,
+                               preferred_types=target_types,
+                               season_weights=season_weights,
+                               cross_batch_covered=cross_batch_covered,
+                               season_label=season_label,
+                               topic_count=article_count,
+                               yesterday_keywords=yesterday_keywords)
+        if CONTENT_APP == "basketball" and not topics:
             topics = _build_direct_news_topics(match_data, used_sources=used_sources)
-            print(f"   📰 直接使用原始新闻候选: {len(topics)} 篇（按素材完整度排序）")
-        else:
-            # 多篇及财经任务继续使用 LLM 做选题排序。
-            topics = select_topics(match_data, topic_history=topic_history,
-                                   preferred_types=target_types,
-                                   season_weights=season_weights,
-                                   cross_batch_covered=cross_batch_covered,
-                                   season_label=season_label,
-                                   topic_count=article_count,
-                                   yesterday_keywords=yesterday_keywords)
+            print(f"   📰 AI选题无结果，回退原始新闻候选: {len(topics)} 篇")
         extra_meta = {"type": "match_analysis"}
         _assign_columns_to_topics(topics, batch_mode)
 

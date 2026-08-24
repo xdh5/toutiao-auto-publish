@@ -90,7 +90,7 @@ def test_finance_article_translates_and_enforces_chinese_length(monkeypatch):
         },
     }
 
-    article = orchestrator._rewrite_finance_article(topic, source)
+    article = orchestrator._rewrite_finance_article(topic, source, {"title": "初稿", "content": "中" * 500})
 
     assert article["title"] == "金价上涨背后的市场变化"
     assert len(article["content"]) == 500
@@ -114,4 +114,5 @@ def test_finance_article_rejects_body_outside_target_length(monkeypatch):
         orchestrator._rewrite_finance_article(
             {"title": "Business update", "content_type": "海外商业"},
             {"article_text": "English source " * 30, "fixture": {"source": "worldnews"}},
+            {"title": "初稿", "content": "中" * 500},
         )
