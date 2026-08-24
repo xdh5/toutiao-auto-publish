@@ -288,6 +288,7 @@ jobs:
           done
 
       - name: 发布到头条号
+        id: publish_article
         if: steps.params.outputs.skip != 'true'
         env:
           HY3_API_KEY: ${{ secrets.HY3_API_KEY }}
@@ -299,7 +300,9 @@ jobs:
           python publisher.py "${{ steps.params.outputs.today }}" --headless --batch="${{ steps.params.outputs.batch }}"
 
       - name: 生成并发布对应微头条
-        if: steps.params.outputs.skip != 'true'
+        id: publish_micro
+        continue-on-error: true
+        if: steps.params.outputs.skip != 'true' && steps.publish_article.outcome == 'success'
         env:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           TOUTIAO_AUTH_FILE: /tmp/auth/toutiao_auth.json
@@ -308,7 +311,7 @@ jobs:
           python micro_publisher.py "${{ steps.params.outputs.today }}" --batch="${{ steps.params.outputs.batch }}"
 
       - name: 回写批次状态（幂等保护）
-        if: success() && steps.params.outputs.skip != 'true'
+        if: steps.params.outputs.skip != 'true' && steps.publish_article.outcome == 'success'
         env:
           TODAY: ${{ steps.params.outputs.today }}
           BATCH: ${{ steps.params.outputs.batch }}
@@ -381,6 +384,12 @@ jobs:
             /usr/bin/sleep $((attempt * 2))
           done
           echo "ℹ️ 若上方出现推送失败：文章已发布成功，仅仓库元数据回写未成功（下次运行可自动补齐）"
+
+      - name: 微头条失败则标记任务失败
+        if: steps.publish_micro.outcome == 'failure'
+        run: |
+          echo "❌ 长文章已发布并完成幂等标记，但对应微头条发布失败；请单独补发微头条。"
+          exit 1
       - name: 上传产物
         if: always()
         uses: actions/upload-artifact@v4

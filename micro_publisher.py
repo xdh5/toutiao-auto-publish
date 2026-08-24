@@ -120,7 +120,8 @@ def generate_draft(date_str, batch):
     }
     draft_path = output_dir / f"micro-{batch}.json"
     draft_path.write_text(json.dumps(draft, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"微头条已生成: {draft_path} ({len(re.sub(r'\s+', '', content))}字)")
+    content_length = len(re.sub(r"\s+", "", content))
+    print(f"微头条已生成: {draft_path} ({content_length}字)")
     return draft
 
 

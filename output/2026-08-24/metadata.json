@@ -175,5 +175,7 @@
     }
   ],
   "data_sources": {},
-  "batches_completed": []
+  "batches_completed": [
+    "morning"
+  ]
 }
