@@ -14,9 +14,9 @@ from app.utils import load_prompt_template
 PROMPT_DIR = Path(__file__).parent.parent / "prompts"
 PROMPT_FILES = ("topic_selector.txt", "rewrite_article.txt")
 EXPECTED_PROMPT_HASHES = {
-    "basketball/rewrite_article.txt": "caaa575c590adb513d8b7084206955071e3bb95db6b341c8de3a2c7b0ff68a37",
+    "basketball/rewrite_article.txt": "049513a2c8064f7285f6e46cd79198b625937e90a6f3f6ddfab763726cca4bbb",
     "basketball/topic_selector.txt": "904a61930ada5b9eede2a9adec7bed6796e020b3df696b0e4bba51e886817474",
-    "finance/rewrite_article.txt": "d55d60749e8146084c909a3bd6a59aa9b31077bbb6f4332cae9558c3e877c6f1",
+    "finance/rewrite_article.txt": "ae2e3a1811f2e965346ac22ff2a9011a7287355c603c89d11c46c0a98ba477ad",
     "finance/topic_selector.txt": "0df23297bf665531b07c49e2a3c9662982fc718ff63f4f68774eb017ec98f9df",
 }
 
