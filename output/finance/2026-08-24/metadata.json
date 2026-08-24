@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-24",
+  "generated_at": "2026-08-24T09:31:00.046360",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "evening",
+  "articles": [],
+  "topics": [
+    {
+      "title": "上半年我国交通运输主要指标保持增长_时政头条_大众网",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "453381782",
+      "_finance": true,
+      "_column_id": "finance-news-evening",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "💼",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整且早间未发布的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "晚间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "evening",
+      "topic": "341.7亿人次流动背后，基建账本悄悄翻页了",
+      "content_type": "新闻微头条",
+      "content": "上半年全国跨区域人员流动达341.7亿人次，人均24次，直接拉动货运、港口、高速等基建需求。\n\n全国港口吞吐量90.7亿吨，外贸部分同比增长4.3%；宁波、青岛、厦门密集开通新航线，拓展出海通道。\n\n江苏苏通第二过江通道、四川南江至三台高速、甘肃景泰至礼县高速等超200亿元项目集中落地，聚焦长三角联动、秦巴山物流疏通和西部陆海新通道补链。\n\n这些基建投入不直接产生GDP数字，但通过缩短运输距离、节省通行时间，持续支撑实体经济运转效率。\n#基建投资# #宏观经济#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "evening"
+  ]
+}
