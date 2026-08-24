@@ -1,8 +1,14 @@
-output/
+output/**
+!output/finance/
+!output/football/
+!output/finance/**/
+!output/football/**/
+!output/finance/**/metadata.json
+!output/football/**/metadata.json
 output_*/
-!output/**/metadata.json
 toutiao_auth.json
 __pycache__/
+.pytest_cache/
 *.pyc
 /tmp/
 logs/
@@ -11,8 +17,3 @@ logs/
 # OpenWolf memory system
 .wolf/
 .git-football-backup/
-
-# WeChat miniprogram
-miniprogram/private.*.key
-miniprogram/node_modules/
-static_data/

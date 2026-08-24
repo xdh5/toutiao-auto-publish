@@ -53,11 +53,8 @@ python micro_publisher.py 2026-08-24 --batch=morning
 | `FINANCE_UNSPLASH_ACCESS_KEY` | 财经配图；暂时兼容旧 `UNSPLASH_ACCESS_KEY` |
 | `FOOTBALL_UNSPLASH_ACCESS_KEY` | 篮球配图；未配置时兼容共用旧密钥 |
 
-GitHub 的统一批次工作流支持单独选择 `app` 和 `batch`。财经与篮球工作流运行使用共同并发组 `toutiao-publish`，`cancel-in-progress: false`，因此同时触发时会排队逐个发布，不会同时操作头条后台。
+GitHub 的统一批次工作流支持单独选择 `app` 和 `batch`，也支持 `app=both`。自动早、午、晚批次会同时为财经和篮球准备任务，两个账号进入共同并发队列逐个发布，不会同时操作头条后台。工作流界面分为“1. 准备任务 → 2. 写文章 → 3. 发布”三个阶段。
 
-当前自动 cron 只启用财经。篮球已经可以通过统一工作流选择 `app=football` 手动运行；配置并验证 `FOOTBALL_TOUTIAO_AUTH_GZ` 后再启用篮球 cron，避免旧仓库尚未停用或登录状态缺失时重复发布、误用账号。
-| `UNSPLASH_ACCESS_KEY` | 文章配图 |
-| `TOUTIAO_AUTH_GZ` | gzip + Base64 编码后的头条登录状态 |
 | `WXPUSHER_APPTOKEN` | 运行结果通知，可选 |
 | `WXPUSHER_UID` | 通知接收人，可选 |
 | `HY3_API_KEY` | 旧流程兼容模型，可选 |
