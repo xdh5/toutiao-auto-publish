@@ -84,6 +84,8 @@ GitHub 的统一批次工作流支持单独选择 `app` 和 `batch`，也支持 
 
 | `WXPUSHER_APPTOKEN` | 运行结果通知，可选 |
 | `WXPUSHER_UID` | 通知接收人，可选 |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token，用于发布结果通知 |
+| `TELEGRAM_CHAT_ID` | Telegram 接收会话 ID |
 
 本地 `.env` 与 `toutiao_auth.json` 已被 Git 忽略，不会提交到仓库。
 

@@ -57,3 +57,17 @@ def test_manual_runs_never_read_or_record_batch_slots():
     assert "手动发布不读取也不占用早中晚批次名额" in manual
     assert "--no-record-batch" in scheduled
     assert "--no-record-batch" in manual
+
+
+def test_publish_workflows_send_one_telegram_notification():
+    for name in ("batch.yml", "daily.yml"):
+        workflow = (ROOT / ".github" / "workflows" / name).read_text(
+            encoding="utf-8"
+        )
+
+        assert "name: 4. Telegram 通知" in workflow
+        assert "needs: [prepare, write, publish]" in workflow
+        assert "scripts/notify_telegram.py" in workflow
+        assert "secrets.TELEGRAM_BOT_TOKEN" in workflow
+        assert "secrets.TELEGRAM_CHAT_ID" in workflow
+        assert "pipeline/${{ matrix.app }}/publish-success" in workflow

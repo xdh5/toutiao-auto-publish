@@ -2,6 +2,7 @@ name: 头条财经与篮球早午晚发布
 
 permissions:
   contents: write
+  actions: read
 
 on:
   schedule:
@@ -318,11 +319,54 @@ jobs:
           echo "metadata 推送失败"
           exit 1
 
+      - name: 记录本次发布成功
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true' && success()
+        run: |
+          mkdir -p "pipeline/${{ matrix.app }}"
+          touch "pipeline/${{ matrix.app }}/publish-success"
+
       - name: 保存发布结果
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
-          path: output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/
+          path: |
+            output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/
+            pipeline/${{ matrix.app }}/publish-success
           if-no-files-found: warn
           retention-days: 7
+
+  notify:
+    name: 4. Telegram 通知
+    if: always()
+    needs: [prepare, write, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出通知程序
+        uses: actions/checkout@v4
+
+      - name: 下载发布标记
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: result-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: .notification-results
+          merge-multiple: true
+
+      - name: 发送发布结果
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/notify_telegram.py \
+            --bot-token "$TELEGRAM_BOT_TOKEN" \
+            --chat-id "$TELEGRAM_CHAT_ID" \
+            --batch "${{ needs.prepare.outputs.batch }}" \
+            --repository "${{ github.repository }}" \
+            --run-id "${{ github.run_id }}" \
+            --github-token "$GH_TOKEN" \
+            --marker-root .notification-results \
+            --prepare-result "${{ needs.prepare.result }}" \
+            --write-result "${{ needs.write.result }}" \
+            --publish-result "${{ needs.publish.result }}"
