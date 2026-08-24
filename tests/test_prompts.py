@@ -14,8 +14,8 @@ from app.utils import load_prompt_template
 PROMPT_DIR = Path(__file__).parent.parent / "prompts"
 PROMPT_FILES = ("topic_selector.txt", "rewrite_article.txt")
 EXPECTED_PROMPT_HASHES = {
-    "basketball/rewrite_article.txt": "b00ac4a8a2ebe170f6fa6cbe8dd7da44179fb3f007c3085456fb680ba4cc8e12",
-    "basketball/topic_selector.txt": "d2cfe29e445c9d5f4753723293a8cb84237f637deda943b586891eab8ef9ad09",
+    "basketball/rewrite_article.txt": "09b211d87a8448df86cf416106a04e2cd6adab458493ece1c03022dd4c6add41",
+    "basketball/topic_selector.txt": "904a61930ada5b9eede2a9adec7bed6796e020b3df696b0e4bba51e886817474",
     "finance/rewrite_article.txt": "080d846f94014d437f1fbc369083474ce943ebf925909c0ec4cceb1b02eadb06",
     "finance/topic_selector.txt": "c5dcbae1a15f1156512a98f9c8c09c38eefa15d7d9415d7a17e2c2c34fac08c6",
 }
@@ -43,7 +43,7 @@ def test_runtime_calls_selection_and_direct_rewrite():
     assert "rewrite_article(" in pipeline_source
 
 
-def test_prompts_match_reference_after_domain_replacement_only():
+def test_prompts_match_locked_reference_variants():
     for relative_path, expected in EXPECTED_PROMPT_HASHES.items():
         text = (PROMPT_DIR / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n")
         assert hashlib.sha256(text.encode("utf-8")).hexdigest() == expected
@@ -79,4 +79,6 @@ def test_finance_prompts_keep_finance_scope_and_source_facts():
 def test_basketball_prompts_keep_basketball_scope_and_fidelity():
     prompts = [load_prompt_template(name, "basketball") for name in PROMPT_FILES]
     assert all("篮球" in prompt for prompt in prompts)
+    assert all("岛哥侃篮球" in prompt for prompt in prompts)
+    assert all("球评人老六" not in prompt for prompt in prompts)
     assert "事实零改动" in prompts[1]
