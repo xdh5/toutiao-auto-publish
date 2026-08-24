@@ -16,8 +16,8 @@ PROMPT_FILES = ("topic_selector.txt", "rewrite_article.txt")
 EXPECTED_PROMPT_HASHES = {
     "basketball/rewrite_article.txt": "09b211d87a8448df86cf416106a04e2cd6adab458493ece1c03022dd4c6add41",
     "basketball/topic_selector.txt": "904a61930ada5b9eede2a9adec7bed6796e020b3df696b0e4bba51e886817474",
-    "finance/rewrite_article.txt": "080d846f94014d437f1fbc369083474ce943ebf925909c0ec4cceb1b02eadb06",
-    "finance/topic_selector.txt": "c5dcbae1a15f1156512a98f9c8c09c38eefa15d7d9415d7a17e2c2c34fac08c6",
+    "finance/rewrite_article.txt": "0ef5bb81554a68926af989fd8371c426b270f64a7de45b8e70e9780c7a398062",
+    "finance/topic_selector.txt": "3bf7b5dbba880a644d92fe6bc4ca5bdb71d9886fac74137a5d6134dede78a5ef",
 }
 
 
@@ -74,6 +74,9 @@ def test_finance_prompts_keep_finance_scope_and_source_facts():
     rewrite = load_prompt_template("rewrite_article.txt", "finance")
     assert "财经" in selector
     assert "来源文章" in rewrite
+    assert all("财富研习岛" in prompt for prompt in (selector, rewrite))
+    assert all("岛哥" in prompt for prompt in (selector, rewrite))
+    assert all("球评人老六" not in prompt for prompt in (selector, rewrite))
 
 
 def test_basketball_prompts_keep_basketball_scope_and_fidelity():
