@@ -17,7 +17,22 @@ EXPECTED_PROMPT_HASHES = {
     "basketball/rewrite_article.txt": "09b211d87a8448df86cf416106a04e2cd6adab458493ece1c03022dd4c6add41",
     "basketball/topic_selector.txt": "904a61930ada5b9eede2a9adec7bed6796e020b3df696b0e4bba51e886817474",
     "finance/rewrite_article.txt": "0ef5bb81554a68926af989fd8371c426b270f64a7de45b8e70e9780c7a398062",
-    "finance/topic_selector.txt": "3bf7b5dbba880a644d92fe6bc4ca5bdb71d9886fac74137a5d6134dede78a5ef",
+    "finance/topic_selector.txt": "0df23297bf665531b07c49e2a3c9662982fc718ff63f4f68774eb017ec98f9df",
+}
+
+ALL_RUNTIME_PROMPTS = {
+    "common": ("micro_post_system.txt",),
+    "finance": (
+        "topic_selector.txt", "topic_selector_system.txt",
+        "rewrite_article.txt", "rewrite_article_system.txt",
+        "fact_audit.txt", "fact_audit_system.txt", "micro_post.txt",
+    ),
+    "basketball": (
+        "topic_selector.txt", "topic_materials.txt", "offseason_guidance.txt",
+        "rewrite_article.txt", "rewrite_article_system.txt", "micro_post.txt",
+        "emergency_article.txt", "emergency_article_system.txt",
+        "prediction_article.txt", "prediction_article_system.txt",
+    ),
 }
 
 
@@ -27,6 +42,16 @@ def test_business_prompt_files_exist(content_app, filename):
     path = PROMPT_DIR / content_app / filename
     assert path.exists(), f"缺少 {path}"
     assert path.stat().st_size > 500, f"Prompt 内容过短: {path}"
+    assert load_prompt_template(filename, content_app)
+
+
+@pytest.mark.parametrize(
+    "content_app,filename",
+    [(app, name) for app, names in ALL_RUNTIME_PROMPTS.items() for name in names],
+)
+def test_all_runtime_prompts_are_external_files(content_app, filename):
+    path = PROMPT_DIR / content_app / filename
+    assert path.exists(), f"缺少 {path}"
     assert load_prompt_template(filename, content_app)
 
 
@@ -41,6 +66,22 @@ def test_runtime_calls_selection_and_direct_rewrite():
     assert 'load_prompt_template("rewrite_article.txt")' in rewrite_sources
     assert "generate_article_draft" not in pipeline_source
     assert "rewrite_article(" in pipeline_source
+
+
+def test_micro_and_auxiliary_prompts_are_loaded_at_runtime():
+    import app.micro_publisher as micro_publisher
+
+    micro_source = inspect.getsource(micro_publisher.generate_draft)
+    orchestrator_source = inspect.getsource(orchestrator)
+    assert 'load_prompt_template("micro_post.txt")' in micro_source
+    assert 'load_prompt_template("micro_post_system.txt", "common")' in micro_source
+    for filename in (
+        "topic_materials.txt", "rewrite_article_system.txt", "fact_audit.txt",
+        "fact_audit_system.txt", "offseason_guidance.txt", "emergency_article.txt",
+        "emergency_article_system.txt", "prediction_article.txt",
+        "prediction_article_system.txt",
+    ):
+        assert f'load_prompt_template("{filename}")' in orchestrator_source
 
 
 def test_prompts_match_locked_reference_variants():

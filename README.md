@@ -28,13 +28,14 @@ app/
 ├── publisher.py               # 公用长文章发布
 └── micro_publisher.py         # 公用微头条发布
 prompts/
-├── finance/                   # 财经：选文章、直接改写
-└── basketball/                # 篮球：选文章、直接改写
+├── common/                    # 公用 system 提示词
+├── finance/                   # 财经选题、改写、事实复核、微头条
+└── basketball/                # 篮球选题、改写、微头条、紧急球评、赛前预测
 ```
 
 两个业务只拥有各自的采集实现。写作、去重、配图和发布均在公用层；公用采集接口按 `CONTENT_APP` 延迟加载一个采集器，因此财经进程不会加载篮球采集代码，篮球进程也不会加载财经采集代码。
 
-财经和篮球都执行同一套两阶段写作链：`topic_selector.txt` 从真实素材选择文章，`rewrite_article.txt` 直接根据唯一来源改写成发布稿。两个模板均在运行时实际加载。
+财经和篮球都执行同一套两阶段写作链：`topic_selector.txt` 从真实素材选择文章，`rewrite_article.txt` 直接根据唯一来源改写成发布稿。微头条、财经事实复核、篮球紧急球评、赛前预测以及各次调用的 system 指令也全部存放在 `prompts/`，Python 代码只负责装载模板和填入运行数据。
 
 ## 自动流程
 

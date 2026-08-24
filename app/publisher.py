@@ -302,9 +302,9 @@ def convert_md_to_text(body, title=""):
         if stripped.startswith("![") and "](" in line:
             continue
         # Skip auto-generated footer
-        if stripped in ("每日自动生成", "球评人老六", "*每日自动生成"):
+        if stripped in ("每日自动生成", "球评人老六", "岛哥侃篮球", "*每日自动生成"):
             continue
-        if "每日自动生成" in stripped or "球评人老六" in stripped:
+        if "每日自动生成" in stripped or "球评人老六" in stripped or "岛哥侃篮球" in stripped:
             continue
         if stripped == "---" and idx > total_lines * 0.8:
             continue

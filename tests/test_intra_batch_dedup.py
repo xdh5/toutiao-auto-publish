@@ -77,11 +77,10 @@ def test_dedup_low_overlap_passes():
 
 def test_dedup_prompt_has_core_subject_rule():
     """select_topics prompt must include intra-batch core-subject diversity rule."""
-    import app.orchestrator as orch
-    import inspect
-    src = inspect.getsource(orch.select_topics)
-    assert "不同核心主题" in src, "Prompt must require different core subjects"
-    assert "核心关键词集合" in src, "Prompt must mention keyword set non-overlap"
+    from app.utils import load_prompt_template
+    prompt = load_prompt_template("topic_materials.txt", "basketball")
+    assert "不同核心主题" in prompt, "Prompt must require different core subjects"
+    assert "核心关键词集合" in prompt, "Prompt must mention keyword set non-overlap"
     print("  PASS test_dedup_prompt_has_core_subject_rule")
 
 

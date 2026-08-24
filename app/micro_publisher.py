@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from .constants import DASHSCOPE_KEY, DASHSCOPE_URL, CONTENT_APP
 from .publisher import launch_browser, load_articles
-from .utils import call_llm, safe_json_loads
+from .utils import call_llm, load_prompt_template, safe_json_loads
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -55,39 +55,26 @@ def generate_draft(date_str, batch):
     source_body = str(article.get("body") or "").strip()
     if not topic or not source_body:
         raise ValueError("本批次文章标题或正文为空")
-    content_type = str((article.get("meta") or {}).get("content_type") or "").strip()
     is_basketball = CONTENT_APP == "basketball"
-    if is_basketball:
-        style_rules = """这是一篇NBA文章。压缩成“岛哥侃篮球”风格：直接、有态度、带一点吐槽但不低俗、不攻击个人；只能使用原文事实，人名、球队、比分、日期和数据不得改变，不得把传闻写成官宣；结尾必须提出一个让读者站队或回答的问题。"""
-    else:
-        style_rules = """这是一篇财经科技新闻。压缩成客观、清楚、有信息量的新闻微头条；只能使用原文事实，所有人物、机构、数字、日期、引语和因果必须来自原文，不得加入投资建议。开头直接给出最重要的信息，结尾可以说明这件事值得普通读者关注的原因，但不得增加原文外结论。"""
-    min_chars, max_chars = (180, 300) if is_basketball else (220, 350)
-    content_label = "NBA" if is_basketball else "新闻"
-
-    base_prompt = f"""把下面这篇文章改写成可直接发布的{content_label}类微头条。
-
-硬性要求：
-1. {style_rules}
-2. 正文连同话题共{min_chars}—{max_chars}个中文字符，分3—5个短段落，不另写标题，不写“微头条：”；结尾必须另起一行添加1—2个相关话题，格式为“#话题#”。
-3. 不得新增原文没有的数字，也不得改变原文事实、人物关系和不确定性。
-4. 开头要让人愿意继续看，表达自然，不低俗、不标题党。
-只输出JSON：
-{{"content":"完整微头条正文"}}
-
-原文标题：{topic}
-原文正文：
-{source_body[:7000]}
-"""
+    prompt_template = load_prompt_template("micro_post.txt")
+    system_prompt = load_prompt_template("micro_post_system.txt", "common")
+    if not prompt_template or not system_prompt:
+        raise ValueError("缺少微头条 Prompt")
     content = ""
     last_error = ""
     for attempt in range(3):
         retry_note = (f"\n上一次生成未通过：{last_error}。这次必须修正并重新输出完整正文。"
                       if last_error else "")
+        prompt = prompt_template.format(
+            topic=topic,
+            source_body=source_body[:7000],
+            retry_block=retry_note,
+        )
         raw = call_llm(
             DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
             [
-                {"role": "system", "content": "你是严谨的今日头条短内容编辑，只输出JSON。"},
-                {"role": "user", "content": base_prompt + retry_note},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
             ],
             temperature=0.3,
             max_tokens=1800,
