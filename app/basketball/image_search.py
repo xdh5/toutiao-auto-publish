@@ -1,15 +1,15 @@
-"""财经与篮球共用的文章配图搜索。"""
+"""篮球专用配图搜索。"""
 
 import re
 from urllib.parse import quote_plus
 
 import requests
 
-from .constants import UNSPLASH_KEY, WIKI_PLAYERS, WIKI_TEAMS
+from ..constants import UNSPLASH_KEY, WIKI_PLAYERS, WIKI_TEAMS
 
 
 def search_wikipedia(entity_name, lang="en"):
-    """搜索维基百科实体主图。"""
+    """搜索 NBA 球员或球队的 Wikipedia 主图。"""
     try:
         response = requests.get(
             f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(entity_name)}",
@@ -27,7 +27,7 @@ def search_wikipedia(entity_name, lang="en"):
 
 
 def extract_search_entities(topic):
-    """从话题中识别已配置的 NBA 球员和球队；财经话题会自然返回空列表。"""
+    """从篮球话题中识别已配置的 NBA 球员和球队。"""
     title = str(topic.get("title") or "")
     search_text = title + " " + " ".join(topic.get("keywords_cn", []))
     players = [{"cn": name, "wiki": page} for name, page in WIKI_PLAYERS.items() if name in search_text]
@@ -37,7 +37,7 @@ def extract_search_entities(topic):
 
 
 def search_images(topic, count=5):
-    """按实体图、Unsplash、DuckDuckGo 的顺序寻找文章配图。"""
+    """按 NBA 实体图、Unsplash、DuckDuckGo 的顺序寻找配图。"""
     images = []
     topic = topic if isinstance(topic, dict) else {}
     keywords = [item for item in topic.get("keywords", []) if isinstance(item, str)]
@@ -49,7 +49,7 @@ def search_images(topic, count=5):
             if image["url"] not in {item["url"] for item in images}:
                 images.append(image)
 
-    core = " ".join(english_keywords[:4]) or specific_query or "business technology"
+    core = " ".join(english_keywords[:4]) or specific_query or "NBA basketball"
     if len(images) < count and UNSPLASH_KEY:
         try:
             response = requests.get("https://api.unsplash.com/search/photos", params={
@@ -58,7 +58,8 @@ def search_images(topic, count=5):
             if response.status_code == 200:
                 for result in response.json().get("results", []):
                     images.append({"url": result["urls"]["regular"], "source": "unsplash",
-                                   "alt": result.get("description") or core})
+                                   "alt": result.get("description") or core,
+                                   "photo_id": result.get("id", "")})
         except (requests.RequestException, ValueError, KeyError):
             pass
 

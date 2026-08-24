@@ -1,6 +1,6 @@
 # 头条号财经与篮球自动发布系统
 
-同一仓库维护财经和“岛哥侃篮球”两套业务，共用文章生成、配图、文件写入、头条发布、微头条发布、日志和幂等控制。通过 `CONTENT_APP=finance|basketball` 隔离数据采集与输出目录。
+同一仓库维护财经和“岛哥侃篮球”两套业务，共用文章生成、图片下载处理、文件写入、头条发布、微头条发布、日志和幂等控制。通过 `CONTENT_APP=finance|basketball` 隔离数据采集、选图与输出目录。
 
 财经每日自动生成并发布三篇今日头条文章，并在每篇文章发布成功后追加一条对应微头条：
 
@@ -17,14 +17,15 @@
 ```text
 app/
 ├── finance/collector.py       # 财经专用采集器
+├── finance/image_search.py    # 财经成文后专用选图
 ├── finance/validator.py       # 财经专用字数与数字复核
 ├── basketball/collector.py    # 篮球专用采集器
+├── basketball/image_search.py # 篮球原图与NBA实体选图
 ├── basketball/media_scraper.py
 ├── basketball/validator.py    # 篮球专用比赛事实复核
 ├── validator.py               # 公用7天跨日去重
 ├── data_collector.py          # 中立采集接口，只延迟加载当前业务
 ├── orchestrator.py            # 公用写作编排
-├── image_search.py            # 公用图片搜索
 ├── image_service.py           # 公用图片下载处理
 ├── history.py                 # 公用去重历史
 ├── file_writer.py             # 公用文件写入
@@ -35,7 +36,7 @@ prompts/
 └── basketball/                # 仅 topic_selector.txt、rewrite_article.txt
 ```
 
-两个业务只拥有各自的采集实现。写作、去重、配图和发布均在公用层；公用采集接口按 `CONTENT_APP` 延迟加载一个采集器，因此财经进程不会加载篮球采集代码，篮球进程也不会加载财经采集代码。
+两个业务拥有各自的采集和选图实现。写作、去重、图片下载处理和发布位于公用层；编排器按 `CONTENT_APP` 只加载当前业务的采集器和选图模块，因此财经进程不会加载篮球选图代码，篮球进程也不会加载财经选图代码。
 
 财经和篮球都执行同一套两阶段写作链：`topic_selector.txt` 从真实素材选择文章，`rewrite_article.txt` 根据唯一来源同时生成长文章和 `micro_content`。微头条发布程序直接读取 `micro_content`，不再独立调用模型；财经专用复核会检查长文章与微头条字数。
 
@@ -44,7 +45,7 @@ prompts/
 1. 早晚从 World News API 读取国内财经科技新闻；中午读取与中国读者相关的海外财经科技新闻。
 2. 调用各业务的选题 Prompt 筛选真实来源话题。
 3. 调用各业务的改写 Prompt，直接根据所选来源文章生成发布稿和微头条；与过去7天标题或正文开头重复时自动重写。篮球专用模块复核比分和球员数据，财经专用模块只复核字数与来源数字；连续不通过则换下一条素材。
-4. 使用 Unsplash 搜索配图，没有合适图片时允许无图发布。
+4. 篮球优先使用新闻原图，再按NBA球员或球队搜索；财经在最终文章生成成功后，根据公司、产品、行业和业务场景搜索并稳定轮换 Unsplash 候选。没有合适图片时允许无图发布。
 5. 使用 Playwright登录头条创作后台并发布长文章。
 6. 长文章成功后，生成同类型微头条并通过微头条发布页提交；作品管理页核验成功才算发布完成。
 7. 将批次元数据回写仓库，用于每日三批次幂等控制。

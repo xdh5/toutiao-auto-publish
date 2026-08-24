@@ -46,7 +46,28 @@ def test_collector_loads_only_selected_business(app, forbidden_module):
     )
     result = subprocess.run(
         [sys.executable, "-c", code], cwd=ROOT, env=env,
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    ("app", "expected_module", "forbidden_module"),
+    [
+        ("finance", "app.finance.image_search", "app.basketball.image_search"),
+        ("basketball", "app.basketball.image_search", "app.finance.image_search"),
+    ],
+)
+def test_orchestrator_loads_only_selected_image_search(app, expected_module, forbidden_module):
+    env = {**os.environ, "CONTENT_APP": app, "PYTHONUTF8": "1"}
+    code = (
+        "import sys; import app.orchestrator; "
+        f"assert {expected_module!r} in sys.modules; "
+        f"assert {forbidden_module!r} not in sys.modules, sorted(sys.modules)"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], cwd=ROOT, env=env,
+        capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
     )
     assert result.returncode == 0, result.stderr
 

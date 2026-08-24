@@ -91,3 +91,39 @@ def test_failed_topic_falls_back_until_target_count(monkeypatch):
     }
     assert images == {0: []}
     assert successful_topics == [topics[1]]
+
+
+def test_finance_searches_images_only_after_final_article_succeeds(monkeypatch):
+    topics = [
+        {"title": "失败素材", "content_type": "国内商业"},
+        {"title": "成功素材", "content_type": "国内商业", "keywords": ["business"]},
+    ]
+    image_inputs = []
+
+    def fake_generate(topic, *_args, **_kwargs):
+        if topic["title"] == "失败素材":
+            return {}, "改写失败"
+        return {"title": "最终财经标题", "content": "最终正文包含新能源汽车工厂信息。",
+                "keywords": ["electric vehicle"]}, None
+
+    def fake_search(article, *_args, **_kwargs):
+        image_inputs.append(article)
+        return [{"url": "https://images.example/finance.jpg", "query": "electric vehicle factory"}]
+
+    monkeypatch.setattr(orchestrator, "CONTENT_APP", "finance")
+    monkeypatch.setattr(orchestrator, "generate_article_with_retry", fake_generate)
+    monkeypatch.setattr(orchestrator, "search_images", fake_search)
+
+    images = {}
+    stats = {"generated": 0, "failed": 0, "valid": 0, "issues": []}
+    articles = []
+    orchestrator._generate_articles_from_topics(
+        topics, 1, {"data_source": "worldnews"}, images, stats, articles,
+        date_str="2026-08-24",
+    )
+
+    assert len(image_inputs) == 1
+    assert image_inputs[0]["title"] == "最终财经标题"
+    assert image_inputs[0]["keywords"] == ["electric vehicle"]
+    assert images == {0: [{"url": "https://images.example/finance.jpg",
+                           "query": "electric vehicle factory"}]}

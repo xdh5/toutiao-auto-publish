@@ -25,7 +25,10 @@ from .data_collector import (collect_real_matches, collect_additional_news,
                              collect_future_items, collect_rankings,
                              enrich_source_article)
 from .history import get_topic_history, get_previously_used_sources
-from .image_search import search_images
+if CONTENT_APP == "finance":
+    from .finance.image_search import search_images
+else:
+    from .basketball.image_search import search_images
 
 
 def print_daily_summary(date_str, batch_mode):
@@ -1612,18 +1615,18 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
             f"· 候选{candidate_index + 1}/{len(topics)} [{ct}] ---"
         )
 
-        # 优先用源文章的配图（比赛相关，不重复）
+        # 篮球保留原流程：优先源文章图片，再使用篮球专用搜索。
+        # 财经必须等最终文章生成成功后，才能根据成文重新生成搜索词。
         source_imgs = []
-        if match_data and match_data.get("data_source") == "zhibo8":
+        if CONTENT_APP == "basketball" and match_data and match_data.get("data_source") == "zhibo8":
             source = _find_source_article(topic, match_data)
             if source and source.get("fixture", {}).get("source_images"):
-                max_images = int(os.environ.get("MAX_ARTICLE_IMAGES", "1" if CONTENT_APP == "finance" else "3"))
+                max_images = int(os.environ.get("MAX_ARTICLE_IMAGES", "3"))
                 source_imgs = source["fixture"]["source_images"][:max_images]
                 print(f"   📷 使用源文章配图: {len(source_imgs)} 张")
 
-        if source_imgs:
-            imgs = source_imgs
-        else:
+        imgs = source_imgs
+        if CONTENT_APP == "basketball" and not imgs:
             imgs = search_images(topic, count=5)
 
         generation_retries = 2
@@ -1638,6 +1641,18 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
                 print("   🔄 自动尝试下一个候选话题")
         else:
             stats["valid"] += 1
+            if CONTENT_APP == "finance":
+                image_article = {
+                    **topic,
+                    **art,
+                    "keywords": art.get("keywords") or topic.get("keywords", []),
+                    "keywords_cn": art.get("keywords_cn") or topic.get("keywords_cn", []),
+                }
+                imgs = search_images(image_article, count=5, date_str=date_str)
+                if imgs:
+                    print(f"   📷 财经成文后配图: {len(imgs)} 个候选 · {imgs[0].get('query', '')}")
+                else:
+                    print("   ℹ️ 未找到合适财经配图，将无图保存")
             source_title = topic.get("title", "")[:40]
             sources_used = list(art.get("sources_used", []))
             if source_title and source_title not in sources_used:
