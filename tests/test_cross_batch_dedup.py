@@ -29,15 +29,15 @@ def create_fake_metadata(output_dir, date_str, articles, batches_completed=None)
         "batches_completed": batches_completed or [],
     }
     meta_path = date_dir / "metadata.json"
-    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     return meta_path
 
 
 def test_get_cross_batch_covered_empty():
     """When no metadata.json exists, should return empty sets."""
-    from orchestrator import get_cross_batch_covered
+    from app.orchestrator import get_cross_batch_covered
     # Point OUTPUT_DIR to a temp directory
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig_output = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -54,17 +54,17 @@ def test_get_cross_batch_covered_empty():
 
 def test_get_cross_batch_covered_with_data():
     """Should extract content types, teams, players from existing metadata."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig_output = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             orch.OUTPUT_DIR = Path(tmpdir)
             date_str = "2026-06-02"
             articles = [
-                {"title": "阿森纳点球输巴黎，战术解析", "content_type": "热点球评",
-                 "keywords": ["Arsenal", "PSG", "penalty"], "tags": ["UCL", "final"]},
-                {"title": "姆巴佩转会皇马最新消息", "content_type": "转会资讯",
-                 "keywords": ["Mbappe", "RealMadrid", "transfer"], "tags": ["transfer"]},
+                {"title": "湖人险胜勇士，战术解析", "content_type": "热点球评",
+                 "keywords": ["Lakers", "Warriors", "defense"], "tags": ["NBA", "game"]},
+                {"title": "某队完成球员交易", "content_type": "转会资讯",
+                 "keywords": ["NBA", "trade", "player"], "tags": ["trade"]},
             ]
             create_fake_metadata(tmpdir, date_str, articles, batches_completed=["morning"])
 
@@ -72,7 +72,7 @@ def test_get_cross_batch_covered_with_data():
             assert covered["batch_count"] == 1
             assert "热点球评" in covered["content_types"]
             assert "转会资讯" in covered["content_types"]
-            assert "arsenal" in covered["keywords"] or "Arsenal" in covered["keywords"]
+            assert "lakers" in covered["keywords"] or "Lakers" in covered["keywords"]
             assert len(covered["content_types"]) == 2
     finally:
         orch.OUTPUT_DIR = orig_output
@@ -81,7 +81,7 @@ def test_get_cross_batch_covered_with_data():
 
 def test_save_batch_state_new():
     """save_batch_state should create metadata when none exists."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig_output = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -91,7 +91,7 @@ def test_save_batch_state_new():
 
             meta_path = Path(tmpdir) / date_str / "metadata.json"
             assert meta_path.exists()
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             assert "morning" in meta["batches_completed"]
             assert meta["last_batch"] == "morning"
     finally:
@@ -101,7 +101,7 @@ def test_save_batch_state_new():
 
 def test_save_batch_state_append():
     """save_batch_state should append to existing batches_completed."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig_output = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -113,7 +113,7 @@ def test_save_batch_state_append():
             orch.save_batch_state(date_str, "noon", [{"title": "test2"}])
 
             meta_path = Path(tmpdir) / date_str / "metadata.json"
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             assert "morning" in meta["batches_completed"]
             assert "noon" in meta["batches_completed"]
             assert len(meta["batches_completed"]) == 2
@@ -125,7 +125,7 @@ def test_save_batch_state_append():
 
 def test_save_batch_state_no_duplicate():
     """save_batch_state should not duplicate batch entries."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig_output = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -134,7 +134,7 @@ def test_save_batch_state_no_duplicate():
             orch.save_batch_state(date_str, "morning", [{"title": "test"}])
             orch.save_batch_state(date_str, "morning", [{"title": "test"}])
             meta_path = Path(tmpdir) / date_str / "metadata.json"
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             assert meta["batches_completed"] == ["morning"]
     finally:
         orch.OUTPUT_DIR = orig_output
@@ -225,7 +225,7 @@ def test_cross_batch_with_season_weights():
 
 def test_get_cross_batch_covered_real_import():
     """Verify the function is importable and callable."""
-    from orchestrator import get_cross_batch_covered, save_batch_state
+    from app.orchestrator import get_cross_batch_covered, save_batch_state
     assert callable(get_cross_batch_covered)
     assert callable(save_batch_state)
     print("  PASS test_get_cross_batch_covered_real_import")
@@ -233,7 +233,7 @@ def test_get_cross_batch_covered_real_import():
 
 def test_end_to_end_cross_batch_simulation():
     """Full simulation: morning → noon, verify noon avoids morning's types."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig_output = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -242,18 +242,18 @@ def test_end_to_end_cross_batch_simulation():
 
             # Morning batch writes 2 articles
             morning_articles = [
-                {"title": "阿森纳点球输巴黎", "content_type": "热点球评",
-                 "keywords": ["Arsenal", "PSG"], "tags": ["UCL"]},
-                {"title": "内马尔场外又惹事", "content_type": "八卦趣事",
-                 "keywords": ["Neymar", "gossip"], "tags": ["gossip"]},
+                {"title": "湖人险胜勇士", "content_type": "热点球评",
+                 "keywords": ["Lakers", "Warriors"], "tags": ["NBA"]},
+                {"title": "球星场外趣闻", "content_type": "八卦趣事",
+                 "keywords": ["NBA", "gossip"], "tags": ["gossip"]},
             ]
             orch.save_batch_state(date_str, "morning", morning_articles)
             # Also write full metadata as save_articles_local would
             meta_path = Path(tmpdir) / date_str / "metadata.json"
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             meta["articles"] = morning_articles
             meta["total_articles"] = 2
-            meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+            meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
             # Noon batch should detect covered types
             covered = orch.get_cross_batch_covered(date_str)
@@ -291,7 +291,7 @@ def test_batch_types_imported_not_redefined():
     immediately shadowed by an identical local dict inside main(). The import
     was dead code. Fix removes the local shadow and uses the imported constant.
     """
-    import orchestrator as orch
+    import app.orchestrator as orch
     # Should be importable from the module level (not just inside main())
     assert hasattr(orch, 'BATCH_TYPES') or True  # Check via source that no local redef exists
 
@@ -303,7 +303,7 @@ def test_batch_types_imported_not_redefined():
         "BATCH_TYPES local redefinition found in main() — use the imported constant instead"
 
     # Verify the import exists at module level
-    with open(orch.__file__) as f:
+    with open(orch.__file__, encoding="utf-8") as f:
         full = f.read()
     assert "BATCH_TYPES" in full.split("def main")[0], \
         "BATCH_TYPES must be imported at module level"
@@ -315,7 +315,7 @@ def test_generate_articles_from_topics_exists():
     """#3 bugfix: shared article-generation helper must be importable.
 
     Three near-identical for-loops were consolidated into one function."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     fn = getattr(orch, '_generate_articles_from_topics', None)
     assert fn is not None, "_generate_articles_from_topics function missing"
     assert callable(fn)
@@ -326,7 +326,7 @@ def test_fallback_map_imported_not_redefined():
     """#5 bugfix: FALLBACK_MAP must use the imported constant, not local shadow.
 
     Same pattern as BATCH_TYPES: imported at module level, redefined inside main()."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     import inspect
     src = inspect.getsource(orch.main)
     assert "FALLBACK_MAP = {" not in src, \
@@ -336,7 +336,7 @@ def test_fallback_map_imported_not_redefined():
 
 def test_hupu_pipeline_extracted():
     """#4 bugfix: Hupu pipeline extracted as _run_hupu_pipeline function."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     fn = getattr(orch, '_run_hupu_pipeline', None)
     assert fn is not None, "_run_hupu_pipeline function missing"
     assert callable(fn)

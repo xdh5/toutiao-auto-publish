@@ -21,13 +21,13 @@ def create_metadata_with_performance(output_dir, date_str, articles):
     date_dir.mkdir(parents=True, exist_ok=True)
     meta = {"total_articles": len(articles), "articles": articles}
     meta_path = date_dir / "metadata.json"
-    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     return meta_path
 
 
 def test_analyze_performance_empty():
     """No metadata → empty results."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -43,7 +43,7 @@ def test_analyze_performance_empty():
 
 def test_analyze_performance_basic():
     """Articles with no performance data → base score 1.0 each."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -78,7 +78,7 @@ def test_analyze_performance_basic():
 
 def test_analyze_performance_with_reads():
     """Articles with performance data → weighted scores."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -105,7 +105,7 @@ def test_analyze_performance_with_reads():
 
 def test_get_performance_boost_balanced():
     """Equal performance → neutral boosts (1.0)."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     perf_data = {
         "performance": {"热点球评": 1.0, "交易资讯": 1.0, "战术解析": 1.0},
         "type_stats": {"热点球评": {"count": 1}, "交易资讯": {"count": 1}, "战术解析": {"count": 1}},
@@ -118,7 +118,7 @@ def test_get_performance_boost_balanced():
 
 def test_get_performance_boost_uneven():
     """Uneven performance → boosts reflect ratios."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     perf_data = {
         "performance": {"热点球评": 11.0, "交易资讯": 2.5},
         "type_stats": {"热点球评": {"count": 1}, "交易资讯": {"count": 1}},
@@ -134,7 +134,7 @@ def test_get_performance_boost_uneven():
 
 def test_get_performance_boost_empty():
     """Empty performance → empty boosts."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     boosts = orch.get_performance_boost({"performance": {}, "type_stats": {}})
     assert boosts == {}
     print("  PASS test_get_performance_boost_empty")
@@ -161,7 +161,7 @@ def test_performance_season_weights_merge():
 
 def test_analyze_performance_keyword_tracking():
     """Performance analysis should track keyword/team/player frequency."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -200,10 +200,10 @@ def test_performance_boost_initialized_before_batch_mode():
     performance_boost = {} before the BATCH_TYPES check, so the name always
     resolves regardless of which code path runs.
     """
-    import orchestrator as orch
+    import app.orchestrator as orch
     # Verify the fix exists: performance_boost dict is defaulted before it's checked
     src = orch.__file__
-    with open(src) as f:
+    with open(src, encoding="utf-8") as f:
         content = f.read()
 
     # The initialization of performance_boost must appear before the
@@ -222,7 +222,7 @@ def test_performance_boost_initialized_before_batch_mode():
 
 def test_import_functions():
     """All performance functions should be importable."""
-    from orchestrator import analyze_content_performance, get_performance_boost
+    from app.orchestrator import analyze_content_performance, get_performance_boost
     assert callable(analyze_content_performance)
     assert callable(get_performance_boost)
     print("  PASS test_import_functions")
@@ -230,7 +230,7 @@ def test_import_functions():
 
 def test_performance_lookback_respected():
     """Only articles within lookback window should be counted."""
-    import orchestrator as orch
+    import app.orchestrator as orch
     orig = orch.OUTPUT_DIR
     try:
         with tempfile.TemporaryDirectory() as tmpdir:

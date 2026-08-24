@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""足球自媒体 — 共享工具函数
+"""财经与篮球发布系统的公用工具函数。
 
 retry, call_llm, safe_json_loads, load_prompt_template — 被所有模块使用。
 """
@@ -7,7 +7,7 @@ retry, call_llm, safe_json_loads, load_prompt_template — 被所有模块使用
 import json, time, requests
 from pathlib import Path
 
-PROMPT_DIR = Path(__file__).parent / "prompts"
+PROMPT_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
 
 def load_prompt_template(name):

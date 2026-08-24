@@ -1,4 +1,4 @@
-"""图片服务模块 - 搜索、下载、验证、去重"""
+"""公用图片服务：搜索、下载、验证与去重。"""
 
 import os, re
 import io
@@ -317,7 +317,7 @@ class ImageService:
                                   save_dir: Optional[Path] = None) -> Optional[dict]:
         """Use Playwright to screenshot an NBA score page.
 
-        Tries Dongqiudi (懂球帝) first, then falls back to flashscore.
+        Tries the configured NBA news page first, then falls back to a score page.
         Returns dict with {local_path, filename, source, url} or None.
 
         This guarantees at least 1 real match image per article, unlike
@@ -329,7 +329,7 @@ class ImageService:
         save_path = Path(save_dir) if save_dir else Path("/tmp/match_screenshots")
         save_path.mkdir(parents=True, exist_ok=True)
 
-        # Build search query for Dongqiudi
+        # Build a neutral match search query.
         query = f"{home_team} {away_team}".strip()
         safe_name = re.sub(r'[^a-zA-Z0-9_一-鿿]', '_', query)[:30]
         filename = f"match_{safe_name}_{int(time.time())}.jpg"

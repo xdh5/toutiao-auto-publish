@@ -34,7 +34,7 @@ def test_prompt_files_exist():
 def test_article_generator_sections():
     """article_generator.txt must contain all required sections."""
     path = PROMPT_DIR / "article_generator.txt"
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8")
     for section in REQUIRED_SECTIONS["article_generator.txt"]:
         assert section in content, f"Missing required section: {section}"
     # Must have at least 2 ## examples
@@ -45,7 +45,7 @@ def test_article_generator_sections():
 def test_topic_selector_sections():
     """topic_selector.txt must contain all required sections."""
     path = PROMPT_DIR / "topic_selector.txt"
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8")
     for section in REQUIRED_SECTIONS["topic_selector.txt"]:
         assert section in content, f"Missing required section: {section}"
     print("  PASS test_topic_selector_sections")
@@ -68,7 +68,7 @@ def test_prompt_checksums():
 def test_no_banned_patterns():
     """Prompts should not contain hardcoded example titles that might leak into output."""
     path = PROMPT_DIR / "article_generator.txt"
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8")
     # Should NOT contain real article titles as fixed examples
     # (This is a sanity check, not strict enforcement)
     assert len(content) > 1000, "Prompt too short — may be truncated"

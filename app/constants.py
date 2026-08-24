@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""NBA 自媒体 — 全局常量与配置
+"""财经与篮球发布系统的公用常量与配置。
 
-所有模块共享的常量、API key、URL、字典映射等。
+包含所有模块共享的路径、API 设置与批次配置。
 """
 
 import os
@@ -9,14 +9,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # 本地开发自动读取项目根目录 .env；系统环境变量/GitHub Secrets 优先。
-load_dotenv(Path(__file__).parent / ".env", override=False)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 CONTENT_APP = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
-if CONTENT_APP not in {"finance", "football"}:
-    raise ValueError(f"CONTENT_APP 必须是 finance 或 football，当前为: {CONTENT_APP}")
+if CONTENT_APP not in {"finance", "basketball"}:
+    raise ValueError(f"CONTENT_APP 必须是 finance 或 basketball，当前为: {CONTENT_APP}")
 
 # --- Paths ---
-PROJECT_ROOT = Path(__file__).parent
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "output"))
 
 # --- API keys from env (GitHub Secrets) ---
@@ -44,19 +44,11 @@ UNSPLASH_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
 WORLD_NEWS_API_KEY = _resolve_api_key("", "WORLD_NEWS_API_KEY")
 WORLD_NEWS_URL = "https://api.worldnewsapi.com/search-news"
 NBA_DATA_BASE = "https://www.zhibo8.com"
-NBA_NEWS_BASE = "https://news.zhibo8.com/nba/"
 NBA_STANDINGS_URL = "https://nba.hupu.com/standings"
 NBA_PLAYERS_URL = "https://nba.hupu.com/stats/players"
-# NBA 数据源配置。
-FOOTBALL_DATA_KEY = ""
-FOOTBALL_DATA_BASE = NBA_DATA_BASE
-
 # --- WxPusher ---
 WXPUSHER_APPTOKEN = os.environ.get("WXPUSHER_APPTOKEN", "")
 WXPUSHER_UID = os.environ.get("WXPUSHER_UID", "")
-
-# NBA 赛事配置。
-COMPETITION_IDS = {"NBA": "nba"}
 
 # --- NBA Wikipedia entity mappings ---
 WIKI_PLAYERS = {
@@ -78,7 +70,6 @@ WIKI_TEAMS = {
     "76人": "Philadelphia_76ers", "灰熊": "Memphis_Grizzlies", "国王": "Sacramento_Kings",
 }
 
-FOOTYRENDERS_PLAYERS = {}
 
 # --- Batch content type assignments (Deprecated v1, kept for test compat) ---
 BATCH_TYPES = {
@@ -97,7 +88,7 @@ BATCH_TYPES = {
 #   "news_preferred"  = 优先使用新闻素材，并结合比赛数据
 #   "news"            = 使用新闻素材
 
-FOOTBALL_BATCH_CONFIG = {
+BASKETBALL_BATCH_CONFIG = {
     "morning": {
         "name": "晨读",
         "time": "08:00",
@@ -336,7 +327,7 @@ WEEKLY_COLUMNS = {
     1: {"slug": "zhan-shu-hei-ban", "name": "战术黑板", "icon": "📋",
         "description": "把复杂战术翻译成球迷能吹牛的大白话",
         "best_with": ["战术解析"],
-        "style": "教书体：先抛一个反常识的战术发现，然后用生活类比解释（'就像打游戏选错装备一样'），最后给一个能记住的结论"},
+        "style": "教书体：先抛一个反常识的战术发现，然后用日常类比解释（'就像打游戏选错装备一样'），最后给一个能记住的结论"},
     2: {"slug": "trade-room", "name": "交易茶水间", "icon": "☕",
         "description": "NBA交易与签约的通俗解读",
         "best_with": ["交易资讯", "八卦趣事"],
@@ -390,4 +381,4 @@ FINANCE_BATCH_CONFIG = {
 CONTENT_TYPE_TO_COLUMN.update({"国内商业": "国内商业", "海外商业": "海外商业", "科技动态": "科技动态"})
 
 # 两套业务共用生成、选图和发布实现，仅在运行时选择业务栏目。
-BATCH_CONFIG = FOOTBALL_BATCH_CONFIG if CONTENT_APP == "football" else FINANCE_BATCH_CONFIG
+BATCH_CONFIG = BASKETBALL_BATCH_CONFIG if CONTENT_APP == "basketball" else FINANCE_BATCH_CONFIG

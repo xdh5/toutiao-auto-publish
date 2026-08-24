@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""头条号自动发布 — Playwright 浏览器自动化
+"""公用头条号自动发布模块：Playwright 浏览器自动化。
 
 Usage:
   # 首次使用: 先登录保存状态
@@ -18,13 +18,13 @@ from urllib.parse import parse_qs, unquote
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 OUTPUT_BASE = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "output"))
 AUTH_FILE = Path(os.environ.get("TOUTIAO_AUTH_FILE", PROJECT_ROOT / "toutiao_auth.json"))
 CONTENT_APP = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
 MAX_ARTICLE_IMAGES = max(0, int(os.environ.get(
-    "MAX_ARTICLE_IMAGES", "3" if CONTENT_APP == "football" else "1")))
+    "MAX_ARTICLE_IMAGES", "3" if CONTENT_APP == "basketball" else "1")))
 
 # Toutiao URLs
 TOUTIAO_LOGIN = "https://mp.toutiao.com/auth/page/login/"

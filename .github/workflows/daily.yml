@@ -14,7 +14,7 @@ on:
         options:
           - both
           - finance
-          - football
+          - basketball
       batch:
         description: '批次选择'
         required: false
@@ -39,7 +39,7 @@ jobs:
         id: params
         run: |
           if [ "${{ inputs.app }}" = "both" ]; then
-            echo 'apps=["finance","football"]' >> "$GITHUB_OUTPUT"
+            echo 'apps=["finance","basketball"]' >> "$GITHUB_OUTPUT"
           else
             echo 'apps=["${{ inputs.app }}"]' >> "$GITHUB_OUTPUT"
           fi
@@ -111,8 +111,8 @@ jobs:
 
       - name: 抓取素材并写文章
         env:
-          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'basketball' && secrets.BASKETBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'basketball' && secrets.BASKETBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY }}
           WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY }}
           WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
           WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
@@ -123,7 +123,7 @@ jobs:
             exit 0
           fi
           set +e
-          python orchestrator.py "${{ needs.prepare.outputs.today }}" \
+          python -m app.orchestrator "${{ needs.prepare.outputs.today }}" \
             --batch="${{ needs.prepare.outputs.batch }}" --count=1 --defer-completion
           RC=$?
           set -e
@@ -224,10 +224,10 @@ jobs:
         if: steps.state.outputs.state == 'ready'
         env:
           FINANCE_AUTH_GZ: ${{ secrets.FINANCE_TOUTIAO_AUTH_GZ }}
-          FOOTBALL_AUTH_GZ: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ }}
+          BASKETBALL_AUTH_GZ: ${{ secrets.BASKETBALL_TOUTIAO_AUTH_GZ }}
         run: |
-          if [ "${{ matrix.app }}" = "football" ]; then
-            AUTH_GZ="$FOOTBALL_AUTH_GZ"
+          if [ "${{ matrix.app }}" = "basketball" ]; then
+            AUTH_GZ="$BASKETBALL_AUTH_GZ"
           else
             AUTH_GZ="$FINANCE_AUTH_GZ"
           fi
@@ -244,16 +244,16 @@ jobs:
           WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
           WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
         run: |
-          python publisher.py "${{ needs.prepare.outputs.today }}" --headless \
+          python -m app.publisher "${{ needs.prepare.outputs.today }}" --headless \
             --batch="${{ needs.prepare.outputs.batch }}"
 
       - name: 发布对应微头条
         if: steps.state.outputs.state == 'ready'
         env:
-          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'basketball' && secrets.BASKETBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
           TOUTIAO_AUTH_FILE: toutiao_auth.json
         run: |
-          python micro_publisher.py "${{ needs.prepare.outputs.today }}" \
+          python -m app.micro_publisher "${{ needs.prepare.outputs.today }}" \
             --batch="${{ needs.prepare.outputs.batch }}"
 
       - name: 合并并推送批次完成状态

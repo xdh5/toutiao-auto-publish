@@ -2,12 +2,12 @@ import json
 
 import pytest
 
-import micro_publisher
+from app import micro_publisher
 
 
 def _valid_content():
-    paragraph = "中年以后我才明白，真正让人安心的不是一句漂亮承诺，而是每天认真工作、按时存下一点钱，也愿意照顾好身边的人。"
-    return "\n\n".join([paragraph, paragraph, paragraph, paragraph, paragraph]) + "\n\n#中年生活#"
+    paragraph = "这项业务调整已经进入执行阶段，公司公布的安排、时间和涉及范围都来自原文，市场关注后续进展。"
+    return "\n\n".join([paragraph, paragraph, paragraph, paragraph, paragraph]) + "\n\n#财经新闻#"
 
 
 def test_validate_micro_content_accepts_valid_length_and_source_numbers():
@@ -16,13 +16,13 @@ def test_validate_micro_content_accepts_valid_length_and_source_numbers():
 
 
 def test_validate_micro_content_rejects_invented_number():
-    content = _valid_content().replace("\n\n#中年生活#", "后来我又多赚了99元。\n\n#中年生活#")
+    content = _valid_content().replace("\n\n#财经新闻#", "新增了原文没有的99亿元。\n\n#财经新闻#")
     with pytest.raises(ValueError, match="新增了原文没有的数字"):
         micro_publisher._validate_content(content, _valid_content())
 
 
 def test_validate_micro_content_requires_hashtag():
-    content = _valid_content().replace("\n\n#中年生活#", "")
+    content = _valid_content().replace("\n\n#财经新闻#", "")
     with pytest.raises(ValueError, match="话题标签"):
         micro_publisher._validate_content(content, content)
 

@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-import orchestrator
+import app.orchestrator as orchestrator
 
 
 def _row(article_id, title):

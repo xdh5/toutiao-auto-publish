@@ -1,13 +1,8 @@
 """NBA数据采集与事实结构测试。"""
 
-from constants import COMPETITION_IDS
-from data_collector import fetch_fallback_trends
-from media_scraper import SportsScraper
-from utils import load_prompt_template
-
-
-def test_only_nba_competition_configured():
-    assert COMPETITION_IDS == {"NBA": "nba"}
+from app.basketball.collector import fetch_fallback_trends
+from app.basketball.media_scraper import SportsScraper
+from app.utils import load_prompt_template
 
 
 def test_homepage_parser_keeps_nba_only():

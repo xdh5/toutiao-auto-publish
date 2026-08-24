@@ -1,6 +1,6 @@
 # 头条号财经与篮球自动发布系统
 
-同一仓库维护财经和“岛哥侃篮球”两套业务，共用头条登录、编辑器填写、图片上传、发布接口监听和幂等控制。通过 `CONTENT_APP=finance|football` 完全隔离采集、栏目、提示词、微头条规则和输出目录。
+同一仓库维护财经和“岛哥侃篮球”两套业务，共用文章生成、配图、文件写入、头条发布、微头条发布、日志和幂等控制。通过 `CONTENT_APP=finance|basketball` 隔离数据采集与输出目录。
 
 财经每日自动生成并发布三篇今日头条文章，并在每篇文章发布成功后追加一条对应微头条：
 
@@ -10,9 +10,26 @@
 
 三批正篇无论来源长短均由千问写成450—550字中文新闻，英文来源先翻译为中文；三批微头条均压缩为220—350字。每篇正篇最多使用1张配图，找不到合适图片时允许无图发布。每天合计发布3篇文章和3条微头条。
 
-原有中年生活文章生成实现继续保留，但当前定时流程不调用。新闻内容保留原有配图与发布流程。
+篮球业务采集 NBA 赛程、战报、排名、交易与热点新闻。财经与篮球的元数据分别保存在 `output/finance/` 和 `output/basketball/`，不会互相去重或覆盖。
 
-篮球业务沿用原项目的 NBA 赛程、战报、排名、交易与热点采集，以及“岛哥”文章和 NBA 微头条规则。财经与篮球的元数据分别保存在 `output/finance/` 和 `output/football/`，不会互相去重或覆盖。
+## 代码结构
+
+```text
+app/
+├── finance/collector.py       # 财经专用采集器
+├── basketball/collector.py    # 篮球专用采集器
+├── basketball/media_scraper.py
+├── data_collector.py          # 中立采集接口，只延迟加载当前业务
+├── orchestrator.py            # 公用写作编排
+├── image_search.py            # 公用图片搜索
+├── image_service.py           # 公用图片下载处理
+├── history.py                 # 公用去重历史
+├── file_writer.py             # 公用文件写入
+├── publisher.py               # 公用长文章发布
+└── micro_publisher.py         # 公用微头条发布
+```
+
+两个业务只拥有各自的采集实现。写作、去重、配图和发布均在公用层；公用采集接口按 `CONTENT_APP` 延迟加载一个采集器，因此财经进程不会加载篮球采集代码，篮球进程也不会加载财经采集代码。
 
 ## 自动流程
 
@@ -30,15 +47,15 @@ pip install -r requirements.txt
 playwright install chromium
 
 # 生成指定批次
-$env:CONTENT_APP="finance"   # PowerShell；篮球改为 football
+$env:CONTENT_APP="finance"   # PowerShell；篮球改为 basketball
 $env:OUTPUT_DIR="output/finance"
-python orchestrator.py 2026-08-24 --batch=morning --count=1
+python -m app.orchestrator 2026-08-24 --batch=morning --count=1
 
 # 发布指定批次
-python publisher.py 2026-08-24 --headless --batch=morning
+python -m app.publisher 2026-08-24 --headless --batch=morning
 
 # 根据该批次文章生成并发布对应微头条
-python micro_publisher.py 2026-08-24 --batch=morning
+python -m app.micro_publisher 2026-08-24 --batch=morning
 ```
 
 ## GitHub Actions Secrets
@@ -46,12 +63,12 @@ python micro_publisher.py 2026-08-24 --batch=morning
 | 名称 | 用途 |
 |---|---|
 | `FINANCE_TOUTIAO_AUTH_GZ` | 财经头条号登录状态 |
-| `FOOTBALL_TOUTIAO_AUTH_GZ` | 篮球头条号登录状态 |
+| `BASKETBALL_TOUTIAO_AUTH_GZ` | 篮球头条号登录状态 |
 | `FINANCE_DASHSCOPE_API_KEY` | 财经通义千问 |
-| `FOOTBALL_DASHSCOPE_API_KEY` | 篮球通义千问 |
+| `BASKETBALL_DASHSCOPE_API_KEY` | 篮球通义千问 |
 | `FINANCE_WORLD_NEWS_API_KEY` | 财经 World News |
 | `FINANCE_UNSPLASH_ACCESS_KEY` | 财经配图 |
-| `FOOTBALL_UNSPLASH_ACCESS_KEY` | 篮球配图 |
+| `BASKETBALL_UNSPLASH_ACCESS_KEY` | 篮球配图 |
 
 GitHub 的统一批次工作流支持单独选择 `app` 和 `batch`，也支持 `app=both`。自动早、午、晚批次会同时为财经和篮球准备任务，两个账号进入共同并发队列逐个发布，不会同时操作头条后台。工作流界面分为“1. 准备任务 → 2. 写文章 → 3. 发布”三个阶段。
 

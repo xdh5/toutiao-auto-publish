@@ -4,12 +4,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_scheduled_workflow_queues_finance_then_football():
+def test_scheduled_workflow_queues_finance_then_basketball():
     workflow = (ROOT / ".github" / "workflows" / "batch.yml").read_text(
         encoding="utf-8"
     )
 
-    assert 'apps=["finance","football"]' in workflow
+    assert 'apps=["finance","basketball"]' in workflow
     assert "name: 1. 准备任务" in workflow
     assert "name: 2. 写文章 · ${{ matrix.app }}" in workflow
     assert "name: 3. 发布 · ${{ matrix.app }}" in workflow

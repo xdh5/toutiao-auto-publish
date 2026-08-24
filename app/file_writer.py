@@ -1,4 +1,4 @@
-"""文件写入模块 - 负责将文章和图片保存到文件系统"""
+"""公用文件写入模块：保存文章、图片和元数据。"""
 
 import os
 import json
@@ -54,7 +54,7 @@ class FileWriter:
 
         content = article_data.get("content", "")
         tags = article_data.get("tags", [])
-        category = article_data.get("category", "足球")
+        category = article_data.get("category", "综合")
         keywords = article_data.get("keywords", [])
 
         # 构建 Markdown 文件内容

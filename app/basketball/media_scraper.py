@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NBA 媒体数据采集 — 直播吧赛程、战报与新闻。
+"""篮球专用媒体采集：直播吧 NBA 赛程、战报与新闻。
 
 使用 requests + BeautifulSoup 采集体育媒体数据。
 - 主源：直播吧篮球频道 — NBA赛程、比分、战报与新闻
@@ -7,7 +7,7 @@
 数据由专业记者核实，改写时确保事实准确。
 
 用法:
-    from media_scraper import SportsScraper
+    from app.basketball.media_scraper import SportsScraper
     scraper = SportsScraper()
     matches = scraper.scrape_today_matches("2026-06-30")
     report = scraper.scrape_match_report("https://...matchXXX.htm")
@@ -54,12 +54,10 @@ class ScraperParseError(Exception):
 
 
 class SportsScraper:
-    """体育媒体数据采集器（直播吧 + 懂球帝）
+    """直播吧 NBA 数据采集器。
 
     爬取策略：
-    1. 直播吧 — 赛程页取比赛列表，战报页取全文（优先）
-    2. 懂球帝 — 直接访问文章详情页（备源）
-    3. 都不可用 → ScraperBlockedError → 调用方降级
+    从直播吧赛程页获取比赛列表，从战报页获取全文；不可用时由调用方降级。
     """
 
     # ==================== 直播吧 ====================
@@ -69,7 +67,7 @@ class SportsScraper:
     # 赛程页选择器 (支持降级链，选第一个有效的)
     ZHIBO8_SCHEDULE_SELS = [".schedule", ".match-list", "#schedule",
                              "[class*='schedule']", "[id*='schedule']"]
-    ZHIBO8_FOOTBALL_ITEM_SELS = ["li[data-type='basketball']",
+    ZHIBO8_BASKETBALL_ITEM_SELS = ["li[data-type='basketball']",
                                    "li[class*='basketball']",
                                    "[class*='match-item']",
                                    "[class*='game-item']"]
@@ -81,11 +79,6 @@ class SportsScraper:
     ZHIBO8_NEWS_LINK_SELS = [r"nba/\d{4}-\d{2}-\d{2}/\w+native\.htm",
                                r"nba/\d{4}-\d{2}-\d{2}/\w+\.htm",
                                r"news.*match"]
-
-    # ==================== 懂球帝 ====================
-    DQ_BASE = "https://www.dongqiudi.com"
-    DQ_ARTICLE_SELS = [".detail", ".article-content", ".content",
-                        ".news-content", "article", ".rich-content"]
 
     # ==================== 反爬配置 ====================
     REQUEST_DELAY = 1.0
@@ -174,11 +167,11 @@ class SportsScraper:
         通过寻找"中文队名+数字比分"文本模式来推断容器。
         适用于网站完全重构后，CSS类名全部变更的场景。
 
-        返回 dict: {"schedule_sel": str, "football_sel": str,
+        返回 dict: {"schedule_sel": str, "basketball_sel": str,
                      "teams_sel": str, "league_sel": str}
                 元素为空表示未找到
         """
-        result = {"schedule_sel": "", "football_sel": "",
+        result = {"schedule_sel": "", "basketball_sel": "",
                   "teams_sel": "", "league_sel": ""}
 
         # 尝试找到包含比分模式(中文+数字+横线+数字)的容器
@@ -204,11 +197,11 @@ class SportsScraper:
                 if class_names:
                     result["schedule_sel"] = f"{parent.name}.{class_names.replace(' ', '.')}"
 
-            # 推断足球条目选择器
+            # 推断篮球条目选择器
             tag = first.name
             cls = " ".join(first.get("class", []))
             if cls:
-                result["football_sel"] = f"{tag}.{cls.replace(' ', '.')}"
+                result["basketball_sel"] = f"{tag}.{cls.replace(' ', '.')}"
 
             # 推断队名选择器: 找比分前后的中文元素
             teams_el = first.find("span", string=re.compile(r"[一-鿿]{2,6}"))
@@ -279,104 +272,6 @@ class SportsScraper:
         except Exception as e:
             print(f"   ⚠️ 新闻解析异常: {e}")
             return []
-
-    def scrape_dongqiudi_headlines(self, max_articles: int = 20) -> list[dict]:
-        """从懂球帝首页获取文章列表（备源）。
-
-        懂球帝结构稳定，文章链接形如 /articles/6016509.html。
-        返回文章标题和URL，正文通过 scrape_dongqiudi_article 懒加载。
-        """
-        try:
-            html = self._http_get(f"{self.DQ_BASE}/", referer=self.DQ_BASE)
-            soup = BeautifulSoup(html, "html.parser")
-            articles = []
-            seen_urls = set()
-
-            for a in soup.find_all("a", href=re.compile(r"/articles/\d+\.html", re.I)):
-                href = a.get("href", "")
-                text = a.get_text(strip=True)
-
-                if not href or not text or len(text) < 20:
-                    continue
-                if href in seen_urls:
-                    continue
-                seen_urls.add(href)
-
-                # 拼完整 URL
-                if href.startswith("//"):
-                    href = "https:" + href
-                elif href.startswith("/"):
-                    href = self.DQ_BASE + href
-                elif not href.startswith("http"):
-                    href = self.DQ_BASE + "/" + href.lstrip("/")
-
-                # 清理标题：去掉前导分类和后缀时间/评论数
-                # 懂球帝格式: "足球纽约市长：xxx五洲世界杯07-09 11:15" 或 "01Tyc：xxx22 评论"
-                clean_title = re.sub(
-                    r'^(?:\d{2})?(?:足球|篮球|电竞|综合|英超|西甲|意甲|德甲|法甲|中超|欧冠|世界杯|五洲|德甲中超|意甲德甲|法甲五洲|英超世界杯|英超意甲|英超德甲|英超五洲)\s*',
-                    '', text)
-                clean_title = re.sub(
-                    r'\s*(?:\d{2}[-:]\d{2}\s*\d+[评评论]*|评论|\d+评论).*$',
-                    '', clean_title).strip()
-                # 如果清理后太短，用原始文本的前60字
-                if len(clean_title) < 8:
-                    clean_title = text[:60]
-
-                articles.append({
-                    "source": "dongqiudi",
-                    "title": clean_title[:80],
-                    "url": href,
-                    "article_text": "",
-                })
-
-                if len(articles) >= max_articles:
-                    break
-
-            print(f"   📰 懂球帝文章: {len(articles)} 篇")
-            return articles
-        except Exception as e:
-            print(f"   ⚠️ 懂球帝首页解析异常: {e}")
-            return []
-
-    def scrape_dongqiudi_article(self, article_url: str) -> Optional[dict]:
-        """从懂球帝获取文章内容（备源）。
-
-        Args:
-            article_url: 懂球帝文章 URL，如 https://www.dongqiudi.com/article/123456.html
-
-        Returns:
-            文章 dict，含标题、正文。
-        """
-        if not article_url or "dongqiudi" not in article_url:
-            return None
-        try:
-            html = self._http_get(article_url, referer="https://www.dongqiudi.com/")
-            soup = BeautifulSoup(html, "html.parser")
-            title_el = soup.find("h1") or soup.find(class_=re.compile(r"title", re.I))
-            content_el = self._select_one_fallback(soup, self.DQ_ARTICLE_SELS)
-            title = title_el.get_text(strip=True) if title_el else ""
-            content = ""
-            if content_el:
-                for tag in content_el.find_all(["script", "style"]):
-                    tag.decompose()
-                # 去掉导航栏等非正文区域
-                for nav in content_el.find_all(["nav", "header", "footer"]):
-                    nav.decompose()
-                content = content_el.get_text("\n", strip=True)
-                # 去掉首尾的导航文本（懂球帝文章常有"懂球帝首页/动态/..."前缀）
-                lines = [l.strip() for l in content.split("\n") if l.strip()]
-                # 跳过前几条导航/元数据行
-                skip_prefixes = ("懂球帝首页", "动态", "七零", "发布于")
-                body_start = 0
-                for i, line in enumerate(lines[:8]):
-                    if any(line.startswith(p) for p in skip_prefixes):
-                        body_start = i + 1
-                content = "\n".join(lines[body_start:])
-            if title and content:
-                return {"source": "dongqiudi", "title": title, "article_text": content}
-        except Exception as e:
-            print(f"   ⚠️ 懂球帝文章解析异常: {e}")
-        return None
 
     def check_available(self) -> bool:
         """检查直播吧是否可访问。"""
@@ -517,7 +412,7 @@ class SportsScraper:
             schedule = soup.find(class_=re.compile(r"schedule|match|contest", re.I))
         if schedule:
             # 只解析带 data-type/league 标签的条目；全站链接无法可靠区分NBA与WNBA。
-            for li in self._find_all_fallback(schedule, self.ZHIBO8_FOOTBALL_ITEM_SELS):
+            for li in self._find_all_fallback(schedule, self.ZHIBO8_BASKETBALL_ITEM_SELS):
                 self._parse_basketball_li(li, date_str, matches, seen_urls)
 
         # 不从全页新闻标题反推比赛：普通NBA新闻中的金额（如300-400万）

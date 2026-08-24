@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""足球自媒体 — 结构化日志模块
+"""财经与篮球发布系统的公用结构化日志模块。
 
 用法:
-    from logger import log
+    from app.logger import log
     log.info("正在采集比赛数据...")
     log.warning("无比赛数据，启用回退模式")
     log.error("API调用失败", exc_info=True)
@@ -17,13 +17,14 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 
 # Determine log directory
-LOG_DIR = Path(os.environ.get("OUTPUT_DIR", Path(__file__).parent / "output")) / "logs"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+LOG_DIR = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "output")) / "logs"
 
 # Ensure log directory exists
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Create logger
-log = logging.getLogger("football_auto_publish")
+log = logging.getLogger("toutiao_auto_publish")
 log.setLevel(logging.DEBUG)
 
 # Console handler — INFO and above

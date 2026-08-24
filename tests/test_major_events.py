@@ -1,6 +1,6 @@
 """NBA重大事件识别测试。"""
 
-from orchestrator import detect_major_events
+from app.orchestrator import detect_major_events
 
 
 def fixture(home, away, home_score, away_score, status="FT"):

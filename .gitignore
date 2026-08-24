@@ -1,10 +1,10 @@
 output/**
 !output/finance/
-!output/football/
+!output/basketball/
 !output/finance/**/
-!output/football/**/
+!output/basketball/**/
 !output/finance/**/metadata.json
-!output/football/**/metadata.json
+!output/basketball/**/metadata.json
 output_*/
 toutiao_auth.json
 __pycache__/

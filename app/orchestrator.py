@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""NBA 自媒体 - 文章生成编排器 (独立版，无 Flask 依赖)
+"""财经与篮球文章生成的公用编排入口。
 
-Usage: python orchestrator.py [YYYY-MM-DD]
+Usage: python -m app.orchestrator [YYYY-MM-DD]
 """
 
 import os, json, sys, subprocess, requests, time, re, signal, yaml
@@ -11,21 +11,21 @@ from pathlib import Path
 from collections import defaultdict
 from difflib import SequenceMatcher
 
-from file_writer import FileWriter
-from image_service import ImageService
-from constants import (PROJECT_ROOT, OUTPUT_DIR,
+from .file_writer import FileWriter
+from .image_service import ImageService
+from .constants import (PROJECT_ROOT, OUTPUT_DIR,
                        DASHSCOPE_KEY, DASHSCOPE_URL, QWEN_MODEL,
-                       UNSPLASH_KEY, FOOTBALL_DATA_KEY,
-                       FOOTBALL_DATA_BASE,
+                       UNSPLASH_KEY,
                        WXPUSHER_APPTOKEN, WXPUSHER_UID,
-                       WIKI_PLAYERS, WIKI_TEAMS, FOOTYRENDERS_PLAYERS,
+                       WIKI_PLAYERS, WIKI_TEAMS,
                        BATCH_CONFIG, BATCH_TYPES, CONTENT_APP)
-from utils import retry, call_llm, safe_json_loads, load_prompt_template
-from logger import log
-from data_collector import (collect_real_matches, collect_transfer_news, collect_future_matches,
-                             search_images, search_wikipedia, search_footyrenders,
-                             extract_search_entities, get_topic_history,
-                             get_previously_used_sources)
+from .utils import retry, call_llm, safe_json_loads, load_prompt_template
+from .logger import log
+from .data_collector import (collect_real_matches, collect_additional_news,
+                             collect_future_items, collect_rankings,
+                             enrich_source_article)
+from .history import get_topic_history, get_previously_used_sources
+from .image_search import search_images
 
 
 def print_daily_summary(date_str, batch_mode):
@@ -36,7 +36,7 @@ def print_daily_summary(date_str, batch_mode):
         return
 
     try:
-        meta = json.loads(meta_path.read_text())
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
         batches = meta.get("batches_completed", [])
         articles = meta.get("articles", [])
 
@@ -109,7 +109,7 @@ def _apply_performance_boost(weights):
     if not perf_path.exists():
         return weights
     try:
-        perf = json.loads(perf_path.read_text())
+        perf = json.loads(perf_path.read_text(encoding="utf-8"))
         articles_data = perf.get("articles", {})
         if not articles_data:
             return weights
@@ -126,7 +126,7 @@ def _apply_performance_boost(weights):
             meta_path = OUTPUT_DIR / date_str / "metadata.json"
             if meta_path.exists():
                 try:
-                    meta = json.loads(meta_path.read_text())
+                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
                     for a in meta.get("articles", []):
                         if a.get("index") == idx:
                             ct = a.get("content_type", "")
@@ -213,8 +213,7 @@ def get_performance_boost(performance_data):
 
 def _run_hupu_pipeline(date_str=None):
     """返回虎扑 NBA 分区排名和球员得分榜。"""
-    from data_collector import fetch_rankings_data
-    return fetch_rankings_data()
+    return collect_rankings()
 
 
 def send_wxpusher(title, content):
@@ -256,7 +255,7 @@ def get_cross_batch_covered(date_str):
     if not meta_path.exists():
         return covered
     try:
-        meta = json.loads(meta_path.read_text())
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
         for a in meta.get("articles", []):
             ct = a.get("content_type", "")
             if ct:
@@ -298,7 +297,7 @@ def get_yesterday_keywords(date_str):
         dt = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=1)
         meta_path = OUTPUT_DIR / dt.strftime("%Y-%m-%d") / "metadata.json"
         if meta_path.exists():
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             for a in meta.get("articles", []):
                 for kw in a.get("keywords", []):
                     yesterday_kw.add(kw.lower())
@@ -318,7 +317,7 @@ def save_batch_state(date_str, batch_name, articles_saved):
     existing = {}
     if meta_path.exists():
         try:
-            existing = json.loads(meta_path.read_text())
+            existing = json.loads(meta_path.read_text(encoding="utf-8"))
         except Exception:
             pass
     batches = existing.get("batches_completed", [])
@@ -432,7 +431,7 @@ def _check_intra_batch_dedup(topics):
 
 
 def select_topics(match_data, topic_history=None, preferred_types=None, season_weights=None, cross_batch_covered=None, season_label="", topic_count=3, yesterday_keywords=None):
-    if match_data.get("data_source") in ("worldnews", "toutiao_ai"):
+    if match_data.get("data_source") == "worldnews":
         topics = []
         offset = 2 if match_data.get("data_source") == "worldnews" and match_data.get("batch_mode") == "evening" else 0
         prior_titles = set(cross_batch_covered.get("titles", set())) if cross_batch_covered else set()
@@ -441,11 +440,8 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
             category = art.get("category", "business")
             region = art.get("region", "cn")
             content_type = art.get("_content_type_hint") or ("科技动态" if category == "technology" else ("海外商业" if region == "overseas" else "国内商业"))
-            if match_data.get("data_source") == "toutiao_ai":
-                image_keywords = ["middle aged life", "working for money", "personal growth"]
-            else:
-                image_keywords = (["technology", "innovation", "digital business"] if category == "technology"
-                                  else ["business", "company", "manufacturing"])
+            image_keywords = (["technology", "innovation", "digital business"] if category == "technology"
+                              else ["business", "company", "manufacturing"])
             topics.append({"title": art.get("title", ""), "angle": "严格依据原文",
                            "keywords": image_keywords, "keywords_cn": [],
                            "content_type": content_type, "score": 100,
@@ -675,7 +671,7 @@ def _check_topic_material_sufficiency(topics, match_data):
 
     Returns filtered list of topics.
     """
-    if match_data.get("data_source") in ("worldnews", "toutiao_ai"):
+    if match_data.get("data_source") == "worldnews":
         return topics
     if not topics:
         return topics
@@ -697,20 +693,11 @@ def _check_topic_material_sufficiency(topics, match_data):
             finished_matches[(away, home)] = m  # reverse lookup
 
     # Collect all known team names (CN + EN) from constants
-    from constants import WIKI_TEAMS
+    from .constants import WIKI_TEAMS
     all_known_teams = set()
-    for team in WIKI_TEAMS:
+    for team, wiki_page in WIKI_TEAMS.items():
         all_known_teams.add(team.lower())
-        # Also add common English names
-        eng_names = {
-            "阿森纳": "arsenal", "曼城": "manchester city", "利物浦": "liverpool",
-            "曼联": "manchester united", "切尔西": "chelsea", "热刺": "tottenham",
-            "巴萨": "barcelona", "皇马": "real madrid", "马竞": "atletico madrid",
-            "拜仁": "bayern munich", "多特": "borussia dortmund", "国米": "inter milan",
-            "AC米兰": "ac milan", "尤文": "juventus", "巴黎": "psg",
-        }
-        if team in eng_names:
-            all_known_teams.add(eng_names[team])
+        all_known_teams.add(wiki_page.replace("_", " ").lower())
 
     filtered = []
     dropped = []
@@ -847,7 +834,7 @@ def _find_source_article(topic, match_context):
     """
     if not match_context:
         return None
-    if match_context.get("data_source") in ("worldnews", "toutiao_ai"):
+    if match_context.get("data_source") == "worldnews":
         wanted_id = topic.get("_source_article_id")
         for art in match_context.get("news_articles", []):
             if wanted_id and art.get("article_id") != wanted_id:
@@ -956,17 +943,10 @@ def _rewrite_finance_article(topic, source, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
     source_title = fixture.get("article_title") or topic.get("title", "")
-    is_suggestion = fixture.get("source") == "toutiao_ai"
-    length_rule = ("围绕这个创作话题，以一位经历过工作、家庭和生活起伏的中年人第一人称，一次性写成原创生活分享，不做新闻改写。文章要励志，并自然结合普通人挣钱、攒钱、增加收入、摆脱贫困和追求财富自由的经历与思考。要有具体日常场景、遇到的难处、一次认知或行动转折，以及后来明白的道理；语气朴实、克制、真诚，像饭后和朋友聊天，不装专家、不写新闻腔、不喊口号、不堆空洞鸡汤。不得承诺暴富，不荐股，不编造收益、公共新闻、真实名人经历、调查、统计数字或引语。正文必须写成6个完整自然段，每段约80—100个汉字，总计严格控制在450—550个汉字；输出前自行估算，少于450个汉字禁止结束。主标题和备选标题都必须为2—30个汉字，标题要有吸引力，采用“现实困境或疑问 + 转折或意外发现”的表达，让人想点开，但不得标题党、夸大或虚构。"
-                   if is_suggestion else
-                   "无论来源长短或语言，都要写成450—550个实际中文字符的完整中文新闻正文。由于模型常低估字数，写作时请按内部目标600—700字准备素材，最终输出必须写成7个完整自然段，每段约70—80个实际中文字符，不使用Markdown小标题。英文素材必须准确翻译为自然中文，标题也必须是2—30个汉字的中文标题。第一段概括核心消息，中间五段依次解释来源中的主要事实、数据、关系和背景，最后一段说明这条消息对普通读者理解相关行业或市场的意义。来源较短时可以加入不含新人物、新机构、新数字和新事件的常识性解释与分析，但不得编造具体事实或引语；来源较长时压缩到规定字数。输出前逐字计算，实际少于450字或超过550字都禁止结束。")
-    role_intro = ("你是一位擅长写中年人生活、挣钱与成长经历的自媒体作者。输入内容是头条创作助手推荐的话题，不是新闻素材。"
-                  if is_suggestion else "你是中国商业新闻编辑。素材已属于business或technology。")
-    fact_constraint = ("允许用不指向任何真实个人的第一人称生活化叙事来承载观点；不得把故事包装成可核验的真实新闻，也不得编造具体收益、调查、统计数字、真实人物或引语。"
-                       if is_suggestion else "具体数字、人物、机构、日期、引语和事件只能来自素材；允许加入不含新增具体事实的常识性解释和分析。")
-    prompt = f"""{role_intro}
+    length_rule = "无论来源长短或语言，都要写成450—550个实际中文字符的完整中文新闻正文。由于模型常低估字数，写作时请按内部目标600—700字准备素材，最终输出必须写成7个完整自然段，每段约70—80个实际中文字符，不使用Markdown小标题。英文素材必须准确翻译为自然中文，标题也必须是2—30个汉字的中文标题。第一段概括核心消息，中间五段依次解释来源中的主要事实、数据、关系和背景，最后一段说明这条消息对普通读者理解相关行业或市场的意义。来源较短时可以加入不含新人物、新机构、新数字和新事件的常识性解释与分析，但不得编造具体事实或引语；来源较长时压缩到规定字数。输出前逐字计算，实际少于450字或超过550字都禁止结束。"
+    prompt = f"""你是中国商业新闻编辑。素材已属于business或technology。
 {length_rule}
-{fact_constraint}{('上次失败：' + retry_hint) if retry_hint else ''}
+具体数字、人物、机构、日期、引语和事件只能来自素材；允许加入不含新增具体事实的常识性解释和分析。{('上次失败：' + retry_hint) if retry_hint else ''}
 article必须返回完整对象，禁止返回null。
 只输出JSON：{{"article":{{"title":"","backup_title":"","content":"","summary":"","keywords":["2-5个英文搜图词"],"keywords_cn":[],"golden_lines":[],"interaction_type":"","interaction_bait":"","content_type":"{topic.get('content_type','国内商业')}"}}}}
 来源媒体：{fixture.get('source_name','')}
@@ -990,19 +970,17 @@ article必须返回完整对象，禁止返回null。
         title = backup_title
     if not 2 <= len(title) <= 30:
         raise ValueError(f"标题长度为{len(title)}字，应为2—30字")
-    if not is_suggestion and not re.search(r"[\u4e00-\u9fff]", title):
+    if not re.search(r"[\u4e00-\u9fff]", title):
         raise ValueError("新闻标题不是中文")
 
     content = str(article.get("content", "")).strip()
     compact_len = len(re.sub(r"\s+", "", content))
     if not 450 <= compact_len <= 550:
         raise ValueError(f"正文为{compact_len}字，应为450—550字")
-    if not is_suggestion and not re.search(r"[\u4e00-\u9fff]", content):
+    if not re.search(r"[\u4e00-\u9fff]", content):
         raise ValueError("新闻正文不是中文")
 
-    fact_rule = ("这是观点文章，允许围绕话题进行常识性分析和价值判断；但不得虚构具体新闻、真实人物经历、调查结论、统计数字或引语。"
-                 if is_suggestion else
-                 "只核对可客观比对的具体人物、身份、机构、数字、日期、比例、直接引语和事件是否与来源一致；普通解释、概括、影响分析、措辞选择和价值判断不属于事实错误，不得因此拒绝。")
+    fact_rule = "只核对可客观比对的具体人物、身份、机构、数字、日期、比例、直接引语和事件是否与来源一致；普通解释、概括、影响分析、措辞选择和价值判断不属于事实错误，不得因此拒绝。"
     review_prompt = f"""你是独立发布审核员，只对照本次来源，不使用外部知识。
 只检查可客观比对的具体人物、身份、机构、数字、日期、比例、直接引语和事件是否与来源一致，标题是否明显捏造具体事实。普通解释、概括、影响分析、措辞选择、中文翻译方式和价值判断一律不得列入issues，也不得导致拒绝。
 事实规则：{fact_rule}
@@ -1014,16 +992,14 @@ article必须返回完整对象，禁止返回null。
 来源正文：{source_text[:9000]}
 待审标题：{article.get('title','')}
 待审正文：{article.get('content','')}"""
-    # 头条创作建议是原创话题：只调用一次千问完成安全判断和成稿，不再二次改写或复核。
-    if not is_suggestion:
-        audit = safe_json_loads(call_llm(
-            DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-            [{"role": "system", "content": "仅核对稿件是否忠实于来源，只输出JSON。"},
-             {"role": "user", "content": review_prompt}], temperature=0.0, max_tokens=2200))
-        if (audit.get("passed") is not True
-                or not all(audit.get(k) is True for k in ("facts_ok", "source_ok", "title_ok"))):
-            raise ValueError("独立复核未通过：" + "; ".join(str(x) for x in audit.get("issues", [])))
-    article.setdefault("keywords", ["middle aged life", "working for money", "personal growth"] if is_suggestion else ["business", "technology"])
+    audit = safe_json_loads(call_llm(
+        DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
+        [{"role": "system", "content": "仅核对稿件是否忠实于来源，只输出JSON。"},
+         {"role": "user", "content": review_prompt}], temperature=0.0, max_tokens=2200))
+    if (audit.get("passed") is not True
+            or not all(audit.get(k) is True for k in ("facts_ok", "source_ok", "title_ok"))):
+        raise ValueError("独立复核未通过：" + "; ".join(str(x) for x in audit.get("issues", [])))
+    article.setdefault("keywords", ["business", "technology"])
     article.setdefault("keywords_cn", [])
     article.setdefault("summary", source_text[:100])
     article["golden_lines"] = []
@@ -1052,9 +1028,8 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
     if not source:
         return None
 
-    if match_context.get("data_source") in ("worldnews", "toutiao_ai"):
-        action = "AI话题一次原创" if match_context.get("data_source") == "toutiao_ai" else "财经审核改写"
-        print(f"\n[3.{index}] [{action}] {topic['title'][:40]}...")
+    if match_context.get("data_source") == "worldnews":
+        print(f"\n[3.{index}] [财经审核改写] {topic['title'][:40]}...")
         return _rewrite_finance_article(topic, source, retry_hint=retry_hint)
 
     source_text = source["article_text"]
@@ -1258,7 +1233,7 @@ def check_cross_day_duplicate(title, content, date_str):
         if not meta_path.exists():
             continue
         try:
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             for a in meta.get("articles", []):
                 hist_title = a.get("title", "")
                 if not hist_title or len(hist_title) < 8:
@@ -1316,10 +1291,10 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
             content = art.get("content", "")
             word_range = topic.get("_word_count_range", [500, 800])
             min_words = word_range[0] if isinstance(word_range, (list, tuple)) else 500
-            if match_context.get("data_source") in ("worldnews", "toutiao_ai") and not content.strip():
+            if match_context.get("data_source") == "worldnews" and not content.strip():
                 last_hint = "正文为空"
                 continue
-            if match_context.get("data_source") not in ("worldnews", "toutiao_ai") and len(content) < max(200, int(min_words * 0.6)):
+            if match_context.get("data_source") != "worldnews" and len(content) < max(200, int(min_words * 0.6)):
                 last_hint = f"正文仅{len(content)}字，需要至少{min_words}字"
                 continue
 
@@ -1354,8 +1329,8 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
 
 def generate_article_with_retry(topic, match_context, index, max_retries=2, date_str=None):
     """改写路径：从直播吧/懂球帝源文章改写为老六风格（Pipeline A）。"""
-    if not match_context or match_context.get("data_source") not in ("zhibo8", "worldnews", "toutiao_ai"):
-        return {}, "Pipeline A 不可用：数据源非直播吧/懂球帝"
+    if not match_context or match_context.get("data_source") not in ("zhibo8", "worldnews"):
+        return {}, "改写流程不可用：数据源不是直播吧或 World News"
 
     if match_context.get("data_source") == "worldnews":
         rows = list(match_context.get("news_articles", []))
@@ -1415,21 +1390,16 @@ def generate_article_with_retry(topic, match_context, index, max_retries=2, date
                 if art_title:
                     # 懒加载正文
                     article_text = art.get("article_text", "")
+                    details = {}
                     if not article_text or len(article_text) < 100:
-                        from media_scraper import SportsScraper
-                        try:
-                            scraper = SportsScraper()
-                            article_text = scraper.scrape_zhibo8_article_content(art.get("url", ""))
-                        except Exception:
-                            article_text = ""
+                        article_text, details = enrich_source_article(art)
                     if article_text and len(article_text) >= 100:
-                        player_stats = SportsScraper._extract_player_stats_from_text(article_text)
                         source = {"article_text": article_text, "fixture": {
                             "source": "zhibo8", "home_team": "", "away_team": "",
                             "league": topic.get("content_type", ""),
                             "article_text": article_text, "source_images": [],
                             "article_title": art_title, "source_url": art.get("url", ""),
-                            "player_stats": player_stats}}
+                            "player_stats": details.get("player_stats", [])}}
                         break
 
     if not source:
@@ -1539,10 +1509,9 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
             def _title_score(t):
                 s = 0
                 if re.search(r'\d', t): s += 3           # 含数字 → 具体
-                for team in ("巴西", "阿根廷", "葡萄牙", "西班牙", "英格兰", "法国", "德国",
-                             "荷兰", "意大利", "比利时", "梅西", "C罗", "姆巴佩", "哈兰德",
-                             "内马尔", "贝林厄姆", "凯恩", "萨拉赫"):
-                    if team in t: s += 2                  # 含巨星/豪门
+                for entity in tuple(WIKI_TEAMS) + tuple(WIKI_PLAYERS) + (
+                        "人工智能", "新能源汽车", "消费", "制造业"):
+                    if entity in t: s += 2                # 含明确主体
                 if any(w in t for w in ("?", "！", "…")): s += 2   # 情绪符号
                 if ":" in t or "：" in t: s += 1           # 解释结构
                 if len(t) < 12: s -= 2                    # 太短 → 信息不足
@@ -1598,7 +1567,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
         # Save article
         art_data = {**art, "downloaded_images": downloaded,
                      "tags": art.get("keywords", []),
-                     "category": "财经" if match_data.get("data_source") in ("worldnews", "toutiao_ai") else "NBA",
+                     "category": "财经" if match_data.get("data_source") == "worldnews" else "NBA",
                      "column_id": art.get("_column_id", ""),
                      "column_name": art.get("_column_name", ""),
                      "batch_name": art.get("_batch_name", ""),
@@ -1811,7 +1780,7 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
         else:
             imgs = search_images(topic, count=5)
 
-        generation_retries = 0 if match_data.get("data_source") == "toutiao_ai" else 2
+        generation_retries = 2
         art, error = generate_article_with_retry(topic, match_data, output_index + 1,
                                                   max_retries=generation_retries, date_str=date_str)
         stats["generated"] += 1
@@ -1836,7 +1805,7 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
 
 
 def _source_title_is_duplicate(title, used_sources):
-    """复用旧 football-auto-publish 的素材标题判重规则。"""
+    """使用公用素材标题判重规则。"""
     short_title = str(title or "")[:40]
     if not short_title:
         return True
@@ -2045,9 +2014,9 @@ def main():
 
         # Step 1b: Collect transfer/gossip news for content diversity
         try:
-            if match_data.get("data_source") in ("worldnews", "toutiao_ai"):
+            if CONTENT_APP != "basketball":
                 raise StopIteration
-            transfer_news = collect_transfer_news(date_str)
+            transfer_news = collect_additional_news(date_str)
             if transfer_news:
                 existing_news = match_data.get("news_articles", [])
                 # Merge, dedup by title
@@ -2074,7 +2043,7 @@ def main():
         # Validate we have media source articles for rewriting
         has_matches = match_data.get("total_matches", 0) > 0
         has_news_articles = bool(match_data.get("news_articles"))
-        if match_data.get("data_source") not in ("zhibo8", "worldnews", "toutiao_ai") or not has_news_articles:
+        if match_data.get("data_source") not in ("zhibo8", "worldnews") or not has_news_articles:
             content_label = "财经" if CONTENT_APP == "finance" else "NBA"
             result_msg = f"无可用{content_label}源文章 (data_source={match_data.get('data_source')})"
             print(f"   ❌ {result_msg}")
@@ -2091,7 +2060,7 @@ def main():
             )
             print(f"   🧹 财经素材去重: {before_count} → {len(match_data['news_articles'])} 篇")
 
-        if CONTENT_APP == "football" and article_count == 1:
+        if CONTENT_APP == "basketball" and article_count == 1:
             topics = _build_direct_news_topics(match_data, used_sources=used_sources)
             print(f"   📰 直接使用原始新闻候选: {len(topics)} 篇（按素材完整度排序）")
         else:
@@ -2113,9 +2082,9 @@ def main():
         # ============================================================
         # Prediction Article — 晚间批次生成明日赛前预测
         # ============================================================
-        if batch_mode == "evening" and match_data.get("data_source") not in ("worldnews", "toutiao_ai"):
+        if batch_mode == "evening" and CONTENT_APP == "basketball":
             print("\n[预测] 晚间批次：采集明日赛程，生成赛前预测...")
-            future_matches = collect_future_matches(date_str, days_ahead=1)
+            future_matches = collect_future_items(date_str, days_ahead=1)
             if future_matches:
                 pred_art = generate_prediction_article(future_matches, date_str=date_str)
                 if pred_art:

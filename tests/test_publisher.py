@@ -12,16 +12,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def test_strip_ai_parentheticals():
     """Should remove only AI-cliche parenthetical patterns, not generic content."""
-    from publisher import strip_ai_parentheticals
+    from app.publisher import strip_ai_parentheticals
     cases = [
         # AI cliches — SHOULD be removed
-        ("巴黎圣日耳曼（注：法甲冠军）夺得冠军", "巴黎圣日耳曼夺得冠军"),
-        ("姆巴佩（值得一提的是，他身价1.8亿）转会皇马", "姆巴佩转会皇马"),
-        ("阿森纳（数据来源：Opta）表现惊艳", "阿森纳表现惊艳"),
-        ("（众所周知，足球是圆的）比赛结果出人意料", "比赛结果出人意料"),
+        ("湖人（注：西部球队）赢下比赛", "湖人赢下比赛"),
+        ("库里（值得一提的是，他手感火热）命中三分", "库里命中三分"),
+        ("某车企（数据来源：公司公告）发布新车", "某车企发布新车"),
+        ("（众所周知，这项运动充满偶然）比赛结果出人意料", "比赛结果出人意料"),
         # Non-AI content — should NOT be removed
-        ("巴黎圣日耳曼（以下简称大巴黎）夺得冠军", "巴黎圣日耳曼（以下简称大巴黎）夺得冠军"),
-        ("姆巴佩（法国前锋）转会皇马", "姆巴佩（法国前锋）转会皇马"),
+        ("某科技公司（以下简称该公司）发布财报", "某科技公司（以下简称该公司）发布财报"),
+        ("库里（勇士后卫）命中三分", "库里（勇士后卫）命中三分"),
         # Edge cases
         ("没有任何括号的句子", "没有任何括号的句子"),
         ("", ""),
@@ -34,9 +34,9 @@ def test_strip_ai_parentheticals():
 
 def test_strip_ai_parentheticals_multiple():
     """Should remove multiple AI-cliche patterns in one text."""
-    from publisher import strip_ai_parentheticals
-    result = strip_ai_parentheticals("（注：官方数据）皇马（众所周知实力强劲）击败巴萨")
-    assert "皇马击败巴萨" in result or "皇马 击败巴萨" in result
+    from app.publisher import strip_ai_parentheticals
+    result = strip_ai_parentheticals("（注：官方数据）湖人（众所周知实力强劲）击败勇士")
+    assert "湖人击败勇士" in result or "湖人 击败勇士" in result
     assert "（注：" not in result
     assert "（众所周知" not in result
     print("  PASS test_strip_ai_parentheticals_multiple")
@@ -44,7 +44,7 @@ def test_strip_ai_parentheticals_multiple():
 
 def test_convert_md_to_text():
     """Should strip markdown formatting for Toutiao plain text."""
-    from publisher import convert_md_to_text
+    from app.publisher import convert_md_to_text
     md = """# 大标题
 
 这是正文段落，有**加粗**和*斜体*。
@@ -65,7 +65,7 @@ def test_convert_md_to_text():
 
 def test_load_articles():
     """Should load articles from output directory."""
-    from publisher import load_articles
+    from app.publisher import load_articles
     try:
         # Create temp article structure
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -83,7 +83,7 @@ def test_load_articles():
                      "slug": "test", "keywords": ["test"], "content_type": "热点球评"}
                 ]
             }
-            (date_dir / "metadata.json").write_text(json.dumps(meta, ensure_ascii=False))
+            (date_dir / "metadata.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
 
             # Create article file
             article_content = """---
@@ -94,7 +94,7 @@ date: 2026-06-02
 # 测试文章
 
 正文内容。"""
-            (date_dir / "article-1-test.md").write_text(article_content)
+            (date_dir / "article-1-test.md").write_text(article_content, encoding="utf-8")
 
             articles = load_articles("2026-06-02")
             assert articles is not None
@@ -112,7 +112,7 @@ date: 2026-06-02
 
 def test_extract_images():
     """Should find image paths in article content."""
-    from publisher import extract_images
+    from app.publisher import extract_images
     content = """# 标题
 正文段落。
 ![配图1](images/article-1-img-001.jpg)
@@ -128,7 +128,7 @@ def test_extract_images():
 
 def test_extract_images_none():
     """Should return empty list when no images."""
-    from publisher import extract_images
+    from app.publisher import extract_images
     content = "没有任何图片的纯文本内容"
     images = extract_images(content)
     assert images == []
@@ -137,7 +137,7 @@ def test_extract_images_none():
 
 def test_publisher_importable():
     """All key functions should be importable."""
-    from publisher import (send_wxpusher, strip_ai_parentheticals, convert_md_to_text,
+    from app.publisher import (send_wxpusher, strip_ai_parentheticals, convert_md_to_text,
                            load_articles, extract_images)
     assert callable(strip_ai_parentheticals)
     assert callable(convert_md_to_text)
@@ -148,7 +148,7 @@ def test_publisher_importable():
 
 def test_send_wxpusher_noop():
     """send_wxpusher should not crash when no credentials configured."""
-    from publisher import send_wxpusher
+    from app.publisher import send_wxpusher
     # Should not raise when WXPUSHER_APPTOKEN is empty
     send_wxpusher("test title", "test content")
     print("  PASS test_send_wxpusher_noop")
@@ -161,8 +161,8 @@ def test_publisher_no_dead_code_in_else():
     context.storage_state() and browser.close() after the login flow
     already handled those operations. Only the error print should remain.
     """
-    import publisher as pub
-    with open(pub.__file__) as f:
+    import app.publisher as pub
+    with open(pub.__file__, encoding="utf-8") as f:
         src = f.read()
     # Verify the error print is still there
     assert '保存失败，请重试' in src, "else branch should still print error"

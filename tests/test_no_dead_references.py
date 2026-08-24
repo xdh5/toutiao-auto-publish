@@ -19,8 +19,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 
 FILES_TO_CHECK = [
-    "orchestrator.py",
-    "publisher.py",
+    "app/orchestrator.py",
+    "app/publisher.py",
 ]
 
 # 合法的名称
@@ -28,8 +28,8 @@ BUILTIN_NAMES = set(dir(builtins))
 ALLOWED_NAMES = BUILTIN_NAMES | {"True", "False", "None"}
 
 # 通过 module.func() 调用的已知模块名
-KNOWN_MODULES = {"data_collector", "file_writer", "image_service",
-                 "constants", "utils", "logger"}
+KNOWN_MODULES = {"data_collector", "file_writer", "image_service", "image_search",
+                 "history", "constants", "utils", "logger"}
 
 
 def get_defined_and_called(filepath):

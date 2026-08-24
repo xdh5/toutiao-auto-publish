@@ -87,7 +87,7 @@ def build_weight_hint(season_weights):
 # Tests
 # ============================================================
 
-def test_load_season_weights_june_world_cup():
+def test_load_season_weights_june_playoffs():
     """June (month 6) should return 休赛期 weights."""
     weights = load_season_weights_from_config(SEASON_WEIGHTS_CONFIG, "2026-06-02")
     assert weights is not None
@@ -96,7 +96,7 @@ def test_load_season_weights_june_world_cup():
     assert weights["转会资讯"] == 1.5
     assert weights["战术解析"] == 0.5
     assert weights["排行榜"] == 1.5
-    print("  PASS test_load_season_weights_june_world_cup")
+    print("  PASS test_load_season_weights_june_playoffs")
 
 
 def test_load_season_weights_august_transfer():
@@ -230,14 +230,14 @@ def test_weight_hint_none():
 
 def test_orchestrator_function_exists():
     """Verify load_season_weights is importable from orchestrator."""
-    from orchestrator import load_season_weights
+    from app.orchestrator import load_season_weights
     assert callable(load_season_weights)
     print("  PASS test_orchestrator_function_exists")
 
 
 def test_orchestrator_real_config():
     """Test load_season_weights against the real config.yaml file."""
-    from orchestrator import load_season_weights
+    from app.orchestrator import load_season_weights
 
     # Test with real config
     weights_june, label_june = load_season_weights("2026-06-02")
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
     all_tests = [
         # load_season_weights accuracy
-        ("load_season_weights: June → 世界杯月", test_load_season_weights_june_world_cup),
+        ("load_season_weights: June → NBA季后赛", test_load_season_weights_june_playoffs),
         ("load_season_weights: August → 夏季转会窗", test_load_season_weights_august_transfer),
         ("load_season_weights: March → 争冠冲刺期", test_load_season_weights_march_title_run),
         ("load_season_weights: February → 常规赛季", test_load_season_weights_february_default),

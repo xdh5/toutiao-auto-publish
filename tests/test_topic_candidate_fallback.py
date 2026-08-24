@@ -1,4 +1,4 @@
-import orchestrator
+import app.orchestrator as orchestrator
 
 
 def test_direct_news_topics_prefer_articles_with_body():
@@ -34,7 +34,7 @@ def test_direct_news_topics_use_shared_title_dedup_rule():
     assert [topic["title"] for topic in topics] == ["勇士公布新赛季训练计划"]
 
 
-def test_finance_and_football_share_source_filter():
+def test_finance_and_basketball_share_source_filter():
     articles = [
         {"title": "国内企业发布季度经营情况", "url": "https://example.com/old"},
         {"title": "国内企业发布季度经营情况，收入继续增长", "url": "https://example.com/same"},

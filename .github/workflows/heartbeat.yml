@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [finance, football]
+        app: [finance, basketball]
     env:
       CONTENT_APP: ${{ matrix.app }}
     steps:
