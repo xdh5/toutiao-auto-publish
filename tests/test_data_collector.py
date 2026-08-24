@@ -49,4 +49,4 @@ def test_player_stats_extraction():
 def test_nba_prompt_files_load():
     selector = load_prompt_template("topic_selector.txt", "basketball")
     rewrite = load_prompt_template("rewrite_article.txt", "basketball")
-    assert all("NBA" in prompt for prompt in (selector, rewrite))
+    assert all("篮球" in prompt for prompt in (selector, rewrite))

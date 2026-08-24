@@ -449,11 +449,15 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
             )
         template = load_prompt_template("topic_selector.txt")
         history = " | ".join(sorted(prior_titles)[:10]) or "无"
-        prompt = template.format(
-            topic_count=topic_count, date=match_data.get("date", ""),
-            batch_mode=match_data.get("batch_mode", ""), history=history,
-            source_list="\n\n".join(source_lines),
-        )
+        prompt = template.replace("{topic_count}", str(topic_count)) + f"""
+
+## 本次运行素材
+当前日期：{match_data.get('date', '')}
+当前批次：{match_data.get('batch_mode', '')}
+已发布内容：{history}
+
+{chr(10).join(source_lines)}
+"""
         selected = None
         for attempt in range(3):
             try:
@@ -984,7 +988,7 @@ def _is_http_400_error(error):
     return bool(error and re.search(r"(?:HTTP(?:Error)?[^\n]*\b400\b|\b400 Client Error\b)", str(error), re.I))
 
 
-def _rewrite_finance_article(topic, source, retry_hint=""):
+def _rewrite_finance_article(topic, source, index=1, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
     source_title = fixture.get("article_title") or topic.get("title", "")
@@ -993,6 +997,7 @@ def _rewrite_finance_article(topic, source, retry_hint=""):
         raise ValueError("缺少 finance/rewrite_article.txt")
     prompt = template.format(
         word_min=450, word_max=550, content_type=topic.get("content_type", "国内商业"),
+        index=index, style="客观、清楚、自然的中文商业新闻",
         source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
         source_title=source_title, source_text=source_text[:9000],
         retry_block=("上次失败：" + retry_hint) if retry_hint else "",
@@ -1074,7 +1079,7 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
 
     if match_context.get("data_source") == "worldnews":
         print(f"\n[3.{index}] [财经直接改写] {topic['title'][:40]}...")
-        return _rewrite_finance_article(topic, source, retry_hint=retry_hint)
+        return _rewrite_finance_article(topic, source, index=index, retry_hint=retry_hint)
 
     source_text = source["article_text"]
     fixture = source["fixture"]

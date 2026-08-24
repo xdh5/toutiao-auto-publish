@@ -2,6 +2,7 @@
 
 import inspect
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,12 @@ from app.utils import load_prompt_template
 
 PROMPT_DIR = Path(__file__).parent.parent / "prompts"
 PROMPT_FILES = ("topic_selector.txt", "rewrite_article.txt")
+EXPECTED_PROMPT_HASHES = {
+    "basketball/rewrite_article.txt": "b00ac4a8a2ebe170f6fa6cbe8dd7da44179fb3f007c3085456fb680ba4cc8e12",
+    "basketball/topic_selector.txt": "d2cfe29e445c9d5f4753723293a8cb84237f637deda943b586891eab8ef9ad09",
+    "finance/rewrite_article.txt": "080d846f94014d437f1fbc369083474ce943ebf925909c0ec4cceb1b02eadb06",
+    "finance/topic_selector.txt": "c5dcbae1a15f1156512a98f9c8c09c38eefa15d7d9415d7a17e2c2c34fac08c6",
+}
 
 
 @pytest.mark.parametrize("content_app", ["finance", "basketball"])
@@ -36,6 +43,12 @@ def test_runtime_calls_selection_and_direct_rewrite():
     assert "rewrite_article(" in pipeline_source
 
 
+def test_prompts_match_reference_after_domain_replacement_only():
+    for relative_path, expected in EXPECTED_PROMPT_HASHES.items():
+        text = (PROMPT_DIR / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n")
+        assert hashlib.sha256(text.encode("utf-8")).hexdigest() == expected
+
+
 def test_finance_selector_uses_ai_selected_article_id(monkeypatch):
     rows = [
         {"article_id": "first", "title": "第一条", "article_text": "甲" * 150,
@@ -56,14 +69,14 @@ def test_finance_selector_uses_ai_selected_article_id(monkeypatch):
     assert topics[0]["angle"] == "产业影响"
 
 
-def test_finance_prompts_exclude_politics_and_keep_source_facts():
+def test_finance_prompts_keep_finance_scope_and_source_facts():
     selector = load_prompt_template("topic_selector.txt", "finance")
     rewrite = load_prompt_template("rewrite_article.txt", "finance")
-    assert "排除政治" in selector
-    assert "唯一来源" in rewrite
+    assert "财经" in selector
+    assert "来源文章" in rewrite
 
 
-def test_basketball_prompts_keep_nba_scope_and_fidelity():
+def test_basketball_prompts_keep_basketball_scope_and_fidelity():
     prompts = [load_prompt_template(name, "basketball") for name in PROMPT_FILES]
-    assert all("NBA" in prompt for prompt in prompts)
+    assert all("篮球" in prompt for prompt in prompts)
     assert "事实零改动" in prompts[1]
