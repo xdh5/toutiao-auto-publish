@@ -399,12 +399,12 @@ WEEKLY_COLUMNS = {
 # 财经版只替换栏目内容；调度、选图、保存和发布仍使用原流程。
 BATCH_CONFIG = {
     "morning": {
-        "name": "晨读", "time": "08:00", "reader_scenario": "早间商业资讯",
+        "name": "晨读", "time": "08:00", "reader_scenario": "早间国内商业资讯",
         "overall_tone": "简洁、客观、信息密度高",
-        "slots": [{"slot": 0, "column_id": "ai-topic-morning", "column_name": "AI创作话题", "icon": "📰",
-                   "topic_domain": "头条创作助手推荐话题", "topic_guidance": "使用AI创作建议第一条话题",
-                   "writing_style": "中年励志生活分享体", "style_detail": "以中年人第一人称分享生活经历，把挣钱、攒钱、普通人翻身和财富自由融入具体场景，朴实真诚，不承诺暴富",
-                   "word_count": [450, 550], "interaction_type": "", "interaction_guidance": "",
+        "slots": [{"slot": 0, "column_id": "finance-news-morning", "column_name": "国内财经科技新闻", "icon": "📰",
+                   "topic_domain": "国内财经与科技新闻", "topic_guidance": "选择business或technology类别中信息最完整的一条",
+                   "writing_style": "商业新闻体", "style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+                   "word_count": [1, 500], "interaction_type": "", "interaction_guidance": "",
                    "data_source_hint": "news"}]},
     "noon": {
         "name": "午间", "time": "12:00", "reader_scenario": "午间海外商业资讯",
@@ -415,12 +415,12 @@ BATCH_CONFIG = {
                    "word_count": [1, 500], "interaction_type": "", "interaction_guidance": "",
                    "data_source_hint": "news"}]},
     "evening": {
-        "name": "晚间", "time": "17:30", "reader_scenario": "晚间商业资讯",
+        "name": "晚间", "time": "17:30", "reader_scenario": "晚间国内商业资讯",
         "overall_tone": "简洁、客观、信息密度高",
-        "slots": [{"slot": 0, "column_id": "ai-topic-evening", "column_name": "AI创作话题", "icon": "💼",
-                   "topic_domain": "头条创作助手推荐话题", "topic_guidance": "使用AI创作建议第一条话题",
-                   "writing_style": "中年励志生活分享体", "style_detail": "以中年人第一人称分享生活经历，把挣钱、攒钱、普通人翻身和财富自由融入具体场景，朴实真诚，不承诺暴富",
-                   "word_count": [450, 550], "interaction_type": "", "interaction_guidance": "",
+        "slots": [{"slot": 0, "column_id": "finance-news-evening", "column_name": "国内财经科技新闻", "icon": "💼",
+                   "topic_domain": "国内财经与科技新闻", "topic_guidance": "选择business或technology类别中信息最完整且早间未发布的一条",
+                   "writing_style": "商业新闻体", "style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+                   "word_count": [1, 500], "interaction_type": "", "interaction_guidance": "",
                    "data_source_hint": "news"}]},
 }
 

@@ -26,13 +26,12 @@ from utils import retry
 
 
 def collect_real_matches(date_str, batch_mode="morning"):
-    """早晚读取头条AI话题，中午采集财经/科技新闻。"""
-    if batch_mode == "noon":
-        return _collect_finance_news(date_str, batch_mode)
-    return _collect_toutiao_ai_topic(date_str, batch_mode)
+    """三批次均采集财经/科技新闻；中午海外，早晚国内。"""
+    return _collect_finance_news(date_str, batch_mode)
 
 
 def _collect_toutiao_ai_topic(date_str, batch_mode):
+    """保留的中年生活文章话题入口，当前定时流程不调用。"""
     from playwright.sync_api import sync_playwright
     auth_file = Path(os.environ.get("TOUTIAO_AUTH_FILE", PROJECT_ROOT / "toutiao_auth.json"))
     if not auth_file.exists():

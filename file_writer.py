@@ -66,6 +66,7 @@ class FileWriter:
 
         batch_name = article_data.get("batch_name", "")
         batch_time = article_data.get("batch_time", "")
+        content_type = article_data.get("content_type", "")
 
         footer = "" if category == "财经" else f"\n---\n*球评人老六 · {date_str}*\n"
         md_content = f"""---
@@ -77,6 +78,7 @@ keywords: [{kw_str}]
 article_index: {index}
 batch_name: {batch_name}
 batch_time: {batch_time}
+content_type: {content_type}
 sources_used: [{sources_str}]
 originality_note: "{originality_note}"
 ---

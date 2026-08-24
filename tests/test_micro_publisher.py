@@ -51,3 +51,27 @@ def test_generate_noon_micro_uses_news_article(tmp_path, monkeypatch):
     assert draft["content_type"] == "新闻微头条"
     assert draft["topic"] == "一家制造企业公布新计划"
     assert (tmp_path / "2026-08-24" / "micro-noon.json").exists()
+
+
+def test_generate_morning_micro_uses_article_content_type(tmp_path, monkeypatch):
+    content = _valid_content()
+    monkeypatch.setattr(micro_publisher, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(
+        micro_publisher,
+        "load_articles",
+        lambda *args, **kwargs: [{
+            "title": "国内企业公布新计划",
+            "body": content,
+            "file": "article.md",
+            "meta": {"content_type": "国内商业"},
+        }],
+    )
+    monkeypatch.setattr(
+        micro_publisher,
+        "call_llm",
+        lambda *args, **kwargs: json.dumps({"content": content}, ensure_ascii=False),
+    )
+
+    draft = micro_publisher.generate_draft("2026-08-25", "morning")
+
+    assert draft["content_type"] == "新闻微头条"

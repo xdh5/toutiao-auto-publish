@@ -52,7 +52,8 @@ def generate_draft(date_str, batch):
     source_body = str(article.get("body") or "").strip()
     if not topic or not source_body:
         raise ValueError("本批次文章标题或正文为空")
-    is_news = batch == "noon"
+    content_type = str((article.get("meta") or {}).get("content_type") or "").strip()
+    is_news = content_type in {"国内商业", "海外商业", "科技动态"} or batch == "noon"
     style_rules = ("""这是一篇财经科技新闻。压缩成客观、清楚、有信息量的新闻微头条；只能使用原文事实，所有人物、机构、数字、日期、引语和因果必须来自原文，不得加入投资建议。开头直接给出最重要的信息，结尾可以说明这件事值得普通读者关注的原因，但不得增加原文外结论。"""
                    if is_news else
                    """这是一篇由头条AI第一条推荐话题生成的中年生活文章。压缩成第一人称生活微头条，保留具体场景、现实困境、行动转折和真实感悟；整体积极励志，可自然保留原文中挣钱、攒钱、普通人翻身或财富自由的内容，但不承诺暴富、不荐股、不鼓励借贷投机。""")
