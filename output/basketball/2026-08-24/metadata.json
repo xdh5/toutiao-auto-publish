@@ -1,0 +1,59 @@
+{
+  "date": "2026-08-24",
+  "generated_at": "2026-08-24T09:32:55.040852",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "evening",
+  "articles": [],
+  "topics": [
+    {
+      "title": "42岁詹姆斯平筐暴扣？德隆蒂·韦斯特：他妈妈曾给我妈打电话",
+      "angle": "用最温情的兄弟情，撕开NBA冷血江湖的假面——真兄弟不是热搜常客，是雪中送炭的电话",
+      "keywords": [
+        "LeBron James",
+        "Delonte West",
+        "brotherhood"
+      ],
+      "keywords_cn": [
+        "詹姆斯",
+        "德隆蒂·韦斯特",
+        "兄弟情"
+      ],
+      "content_type": "八卦趣事",
+      "score": 108,
+      "controversy_level": "medium",
+      "target_emotion": "感动",
+      "why_pick": "罕见真实场外羁绊，击穿流量时代的情感荒漠",
+      "_column_id": "nba-daily",
+      "_column_name": "NBA赛场日报",
+      "_column_icon": "📰",
+      "_writing_style": "快讯集锦体",
+      "_style_detail": "按比赛分块，每场2-3句话加一个记忆点，开头总结今日NBA主旋律，不得补写素材未提供的技术统计。",
+      "_word_count_range": [
+        400,
+        600
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
+      "_topic_domain": "NBA赛况汇总",
+      "_topic_guidance": "汇总当天NBA比赛的高光、冷门、绝杀和关键球员表现。按比赛分块，比分和球员数据严格取自素材。",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
+      "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "evening",
+      "topic": "詹姆斯妈妈一句'别逼我亲自去看他'，比MVP奖杯还烫",
+      "content_type": "NBA微头条",
+      "content": "詹姆斯妈妈一句‘别逼我亲自去看他’，比MVP还烫！\n\n德隆蒂·韦斯特落魄睡桥洞那会儿，格洛丽亚·詹姆斯没发通稿，没开直播，就隔三差五打电话问：‘他吃饭了吗？睡得踏实吗？’\n\n最后一句直接封神：‘振作点，别逼我亲自去看他。’\n\n没合同、没镜头、没热搜——但比所有兄弟情宣言都硬核。\n\n这年头，连‘谢谢’都要截图留证，这种不图回报却永远在线的关系，你信吗？\n\n#NBA人情味# #詹姆斯韦斯特#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "evening"
+  ]
+}
