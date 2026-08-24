@@ -41,8 +41,8 @@ def retry(func, *args, max_retries=3, base_delay=2, desc="API", **kwargs):
             last_err = e
             if isinstance(e, requests.exceptions.HTTPError):
                 status = e.response.status_code if hasattr(e, 'response') and e.response is not None else None
-                # 401(认证失败)/402(配额耗尽)/403(权限)/404(不存在) — 不重试，立即抛出
-                if status in (401, 402, 403, 404):
+                # 400(请求/内容检查失败)以及认证、额度和权限错误不会通过原样重试恢复。
+                if status in (400, 401, 402, 403, 404):
                     print(f"   [{desc}] HTTP {status} — 不可恢复错误，放弃重试: {e}")
                     raise
             if attempt < max_retries - 1:

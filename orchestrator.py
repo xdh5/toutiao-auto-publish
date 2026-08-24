@@ -932,6 +932,22 @@ def _find_source_article(topic, match_context):
     return None
 
 
+def _worldnews_source(article, topic):
+    """Convert one World News row to the verified-source shape used by rewriting."""
+    article_text = article.get("article_text", "")
+    return {"article_text": article_text, "fixture": {
+        "source": "worldnews", "home_team": "", "away_team": "",
+        "home_score": None, "away_score": None, "player_stats": [],
+        "league": article.get("content_type", topic.get("content_type", "")),
+        "article_text": article_text, "article_title": article.get("title", ""),
+        "source_url": article.get("url", ""), "source_name": article.get("source", ""),
+        "source_images": []}}
+
+
+def _is_http_400_error(error):
+    return bool(error and re.search(r"(?:HTTP(?:Error)?[^\n]*\b400\b|\b400 Client Error\b)", str(error), re.I))
+
+
 def _rewrite_finance_article(topic, source, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
@@ -1336,6 +1352,9 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
 
         except Exception as e:
             last_hint = f"异常: {e}"
+            status = e.response.status_code if isinstance(e, requests.exceptions.HTTPError) and e.response is not None else None
+            if status == 400:
+                return {}, f"LLM HTTP 400: {e}"
             if attempt >= max_retries:
                 return {}, f"改写异常: {e}"
 
@@ -1346,6 +1365,34 @@ def generate_article_with_retry(topic, match_context, index, max_retries=2, date
     """改写路径：从直播吧/懂球帝源文章改写为老六风格（Pipeline A）。"""
     if not match_context or match_context.get("data_source") not in ("zhibo8", "worldnews", "toutiao_ai"):
         return {}, "Pipeline A 不可用：数据源非直播吧/懂球帝"
+
+    if match_context.get("data_source") == "worldnews":
+        rows = list(match_context.get("news_articles", []))
+        wanted_id = topic.get("_source_article_id")
+        rows.sort(key=lambda article: article.get("article_id") != wanted_id)
+        errors = []
+        for position, article in enumerate(rows, 1):
+            article_text = str(article.get("article_text") or "").strip()
+            if not article.get("title") or len(article_text) < 100:
+                continue
+            candidate_topic = dict(topic)
+            candidate_topic.update({
+                "title": article.get("title", ""),
+                "_source_article_id": article.get("article_id"),
+                "content_type": article.get("_content_type_hint", topic.get("content_type", "海外商业")),
+            })
+            source = _worldnews_source(article, candidate_topic)
+            art, error = _rewrite_with_retry(candidate_topic, match_context, index, source,
+                                             max_retries, date_str)
+            if not error:
+                topic.update(candidate_topic)
+                return art, None
+            errors.append(f"{article.get('title', '')[:30]}: {error}")
+            if _is_http_400_error(error):
+                print(f"   ⚠️ 第{position}篇触发千问 HTTP 400，自动换下一篇新闻")
+                continue
+            return {}, error
+        return {}, "所有候选新闻均不可用：" + " | ".join(errors)
 
     source = _find_source_article(topic, match_context)
     if not source:
