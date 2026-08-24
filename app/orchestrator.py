@@ -984,50 +984,7 @@ def _is_http_400_error(error):
     return bool(error and re.search(r"(?:HTTP(?:Error)?[^\n]*\b400\b|\b400 Client Error\b)", str(error), re.I))
 
 
-def _article_writing_context(topic):
-    """Return the common style and length fields consumed by both prompt stages."""
-    if CONTENT_APP == "finance":
-        return "客观、清楚、自然的中文商业新闻", 450, 550
-    style_guide = {
-        "热点球评": "像赛后和球友复盘，观点鲜明但事实克制。",
-        "交易资讯": "像球迷群聊交易，区分官宣、报道和流言。",
-        "八卦趣事": "聚焦真实细节和画面，不虚构人物动机。",
-    }
-    word_range = topic.get("_word_count_range", [500, 800])
-    word_min = word_range[0] if isinstance(word_range, (list, tuple)) else 500
-    word_max = word_range[1] if isinstance(word_range, (list, tuple)) and len(word_range) > 1 else word_min + 200
-    return style_guide.get(topic.get("content_type"), "自然口语化中文写作"), word_min, word_max
-
-
-def generate_article_draft(topic, source, index, retry_hint=""):
-    """Stage 2: use the business-specific article_generator template to create a draft."""
-    fixture = source.get("fixture") or {}
-    style, word_min, word_max = _article_writing_context(topic)
-    template = load_prompt_template("article_generator.txt")
-    if not template:
-        raise ValueError(f"缺少 {CONTENT_APP}/article_generator.txt")
-    prompt = template.format(
-        topic_title=topic.get("title", ""), topic_angle=topic.get("angle", ""),
-        content_type=topic.get("content_type", ""), style=style,
-        word_min=word_min, word_max=word_max, index=index,
-        source_title=fixture.get("article_title") or topic.get("title", ""),
-        source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
-        source_text=str(source.get("article_text") or "")[:9000],
-        retry_block=("上次失败：" + retry_hint) if retry_hint else "",
-    )
-    result = safe_json_loads(call_llm(
-        DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL,
-        [{"role": "system", "content": "根据唯一来源生成完整文章初稿，只输出JSON。"},
-         {"role": "user", "content": prompt}],
-        temperature=0.3 if CONTENT_APP == "finance" else 0.6, max_tokens=6000))
-    draft = result.get("article") if isinstance(result, dict) and isinstance(result.get("article"), dict) else result
-    if not isinstance(draft, dict) or not draft.get("content"):
-        raise ValueError("article_generator 未返回完整初稿")
-    print(f"   初稿完成: {draft.get('title','?')}, {len(str(draft.get('content','')))}字")
-    return draft
-
-
-def _rewrite_finance_article(topic, source, draft, retry_hint=""):
+def _rewrite_finance_article(topic, source, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
     source_title = fixture.get("article_title") or topic.get("title", "")
@@ -1038,7 +995,6 @@ def _rewrite_finance_article(topic, source, draft, retry_hint=""):
         word_min=450, word_max=550, content_type=topic.get("content_type", "国内商业"),
         source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
         source_title=source_title, source_text=source_text[:9000],
-        draft_text=json.dumps(draft, ensure_ascii=False),
         retry_block=("上次失败：" + retry_hint) if retry_hint else "",
     )
     first = safe_json_loads(call_llm(
@@ -1102,7 +1058,7 @@ def _rewrite_finance_article(topic, source, draft, retry_hint=""):
     return article
 
 
-def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="", date_str="", source=None, draft=None):
+def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="", date_str="", source=None):
     """将已核实的源文章改写为老六风格。
 
     输入：来自直播吧/懂球帝的记者核实报道
@@ -1117,14 +1073,14 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
         return None
 
     if match_context.get("data_source") == "worldnews":
-        print(f"\n[4.{index}] [财经改写定稿] {topic['title'][:40]}...")
-        return _rewrite_finance_article(topic, source, draft or {}, retry_hint=retry_hint)
+        print(f"\n[3.{index}] [财经直接改写] {topic['title'][:40]}...")
+        return _rewrite_finance_article(topic, source, retry_hint=retry_hint)
 
     source_text = source["article_text"]
     fixture = source["fixture"]
 
     content_type = topic.get("content_type", "热点球评")
-    print(f"\n[4.{index}] [改写定稿-{content_type}] {topic['title'][:40]}...")
+    print(f"\n[3.{index}] [直接改写-{content_type}] {topic['title'][:40]}...")
 
     # 风格引导
     style_guide = {
@@ -1162,7 +1118,6 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
         retry_block=retry_block,
         source_title=fixture.get("article_title") or topic.get("title", ""),
         source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
-        draft_text=json.dumps(draft or {}, ensure_ascii=False),
         topic_title=topic.get("title", ""), topic_angle=topic.get("angle", ""),
     )
 
@@ -1359,11 +1314,9 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
     for attempt in range(max_retries + 1):
         temp = max(0.3, 0.5 - attempt * 0.1)
         try:
-            print(f"\n[3.{index}] [生成初稿] {topic.get('title','')[:40]}...")
-            draft = generate_article_draft(topic, source, index, retry_hint=last_hint)
             art = rewrite_article(topic, match_context, index, temperature=temp,
                                   retry_hint=last_hint, date_str=date_str or "",
-                                  source=source, draft=draft)
+                                  source=source)
             if not art or not isinstance(art, dict):
                 last_hint = "改写返回空结果，请确保输出完整的JSON"
                 continue
