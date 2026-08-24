@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从头条AI创作建议第一条直接生成并发布生活类微头条。"""
+"""按 CONTENT_APP 从对应长文章生成并发布微头条。"""
 
 import argparse
 import json
@@ -13,7 +13,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 
-from constants import DASHSCOPE_KEY, DASHSCOPE_URL
+from constants import DASHSCOPE_KEY, DASHSCOPE_URL, CONTENT_APP
 from publisher import launch_browser, load_articles
 from utils import call_llm, safe_json_loads
 
@@ -26,13 +26,16 @@ PUBLISH_URL = "https://mp.toutiao.com/profile_v4/weitoutiao/publish"
 BATCHES = {"morning", "noon", "evening"}
 def _validate_content(content, source_body):
     compact = re.sub(r"\s+", "", content or "")
-    if not 220 <= len(compact) <= 350:
-        raise ValueError(f"微头条长度异常: {len(compact)}字，应为220—350字")
+    min_chars, max_chars = (180, 300) if CONTENT_APP == "football" else (220, 350)
+    if not min_chars <= len(compact) <= max_chars:
+        raise ValueError(f"微头条长度异常: {len(compact)}字，应为{min_chars}—{max_chars}字")
     if "```" in content or content.lstrip().startswith(("标题：", "标题:")):
         raise ValueError("微头条包含标题或代码块")
     hashtags = re.findall(r"#[^#\n]{2,20}#", content)
     if not 1 <= len(hashtags) <= 2:
         raise ValueError(f"微头条应带1—2个话题标签，实际{len(hashtags)}个")
+    if CONTENT_APP == "football" and not any(mark in content for mark in ("？", "?")):
+        raise ValueError("篮球微头条缺少文末互动问题")
     source_numbers = set(re.findall(r"\d+(?:\.\d+)?%?", source_body))
     output_numbers = set(re.findall(r"\d+(?:\.\d+)?%?", content))
     invented = sorted(output_numbers - source_numbers)
@@ -53,16 +56,22 @@ def generate_draft(date_str, batch):
     if not topic or not source_body:
         raise ValueError("本批次文章标题或正文为空")
     content_type = str((article.get("meta") or {}).get("content_type") or "").strip()
-    is_news = content_type in {"国内商业", "海外商业", "科技动态"} or batch == "noon"
-    style_rules = ("""这是一篇财经科技新闻。压缩成客观、清楚、有信息量的新闻微头条；只能使用原文事实，所有人物、机构、数字、日期、引语和因果必须来自原文，不得加入投资建议。开头直接给出最重要的信息，结尾可以说明这件事值得普通读者关注的原因，但不得增加原文外结论。"""
-                   if is_news else
-                   """这是一篇由头条AI第一条推荐话题生成的中年生活文章。压缩成第一人称生活微头条，保留具体场景、现实困境、行动转折和真实感悟；整体积极励志，可自然保留原文中挣钱、攒钱、普通人翻身或财富自由的内容，但不承诺暴富、不荐股、不鼓励借贷投机。""")
+    is_football = CONTENT_APP == "football"
+    is_news = not is_football and (content_type in {"国内商业", "海外商业", "科技动态"} or batch == "noon")
+    if is_football:
+        style_rules = """这是一篇NBA文章。压缩成“岛哥侃篮球”风格：直接、有态度、带一点吐槽但不低俗、不攻击个人；只能使用原文事实，人名、球队、比分、日期和数据不得改变，不得把传闻写成官宣；结尾必须提出一个让读者站队或回答的问题。"""
+    elif is_news:
+        style_rules = """这是一篇财经科技新闻。压缩成客观、清楚、有信息量的新闻微头条；只能使用原文事实，所有人物、机构、数字、日期、引语和因果必须来自原文，不得加入投资建议。开头直接给出最重要的信息，结尾可以说明这件事值得普通读者关注的原因，但不得增加原文外结论。"""
+    else:
+        style_rules = """这是一篇由头条AI第一条推荐话题生成的中年生活文章。压缩成第一人称生活微头条，保留具体场景、现实困境、行动转折和真实感悟；整体积极励志，可自然保留原文中挣钱、攒钱、普通人翻身或财富自由的内容，但不承诺暴富、不荐股、不鼓励借贷投机。"""
+    min_chars, max_chars = (180, 300) if is_football else (220, 350)
+    content_label = "NBA" if is_football else ("新闻" if is_news else "生活")
 
-    base_prompt = f"""把下面这篇文章改写成可直接发布的{('新闻' if is_news else '生活')}类微头条。
+    base_prompt = f"""把下面这篇文章改写成可直接发布的{content_label}类微头条。
 
 硬性要求：
 1. {style_rules}
-2. 正文连同话题共220—350个中文字符，分3—5个短段落，不另写标题，不写“微头条：”；结尾必须另起一行添加1—2个相关话题，格式为“#话题#”。
+2. 正文连同话题共{min_chars}—{max_chars}个中文字符，分3—5个短段落，不另写标题，不写“微头条：”；结尾必须另起一行添加1—2个相关话题，格式为“#话题#”。
 3. 不得新增原文没有的数字，也不得改变原文事实、人物关系和不确定性。
 4. 开头要让人愿意继续看，表达自然，不低俗、不标题党。
 只输出JSON：
@@ -103,7 +112,7 @@ def generate_draft(date_str, batch):
         "date": date_str,
         "batch": batch,
         "topic": topic,
-        "content_type": "新闻微头条" if is_news else "生活微头条",
+        "content_type": "NBA微头条" if is_football else ("新闻微头条" if is_news else "生活微头条"),
         "source_file": article.get("file", ""),
         "content": content,
         "generated_at": datetime.now().isoformat(),

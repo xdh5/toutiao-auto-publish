@@ -19,7 +19,7 @@ from constants import (PROJECT_ROOT, OUTPUT_DIR,
                        DASHSCOPE_URL, FOOTBALL_DATA_BASE,
                        WXPUSHER_APPTOKEN, WXPUSHER_UID,
                        WIKI_PLAYERS, WIKI_TEAMS, FOOTYRENDERS_PLAYERS,
-                       BATCH_CONFIG, BATCH_TYPES)
+                       BATCH_CONFIG, BATCH_TYPES, CONTENT_APP)
 from utils import retry, call_llm, safe_json_loads, load_prompt_template
 from logger import log
 from data_collector import (collect_real_matches, collect_transfer_news, collect_future_matches,
@@ -1449,9 +1449,10 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
                            When present, skips URL download for that article.
     """
     print(f"\n[4/5] 保存文章...")
+    max_images = int(os.environ.get("MAX_ARTICLE_IMAGES", "1" if CONTENT_APP == "finance" else "3"))
     image_service = ImageService(config={
         "images": {"min_width": 800, "min_height": 600, "max_size_bytes": 5242880,
-                   "min_size_bytes": 51200, "max_per_article": 5, "required_per_article": 1}})
+                   "min_size_bytes": 51200, "max_per_article": 5, "required_per_article": max_images}})
     file_writer = FileWriter(base_dir=str(OUTPUT_DIR))
 
     date_dir = OUTPUT_DIR / date_str
@@ -1471,7 +1472,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
         if i in pre_downloaded:
             # Use pre-downloaded (already cropped) images
             for img_info in pre_downloaded[i]:
-                if len(downloaded) >= 1:
+                if len(downloaded) >= max_images:
                     break
                 if img_info.get("md5"):
                     all_hashes.add(img_info["md5"])
@@ -1480,7 +1481,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
             # Download images from URLs
             img_urls = [img["url"] for img in images_map.get(i, [])[:5]]
             for j, url in enumerate(img_urls):
-                if len(downloaded) >= 1:
+                if len(downloaded) >= max_images:
                     break
                 if not url or not url.startswith("http"):
                     continue
@@ -1798,7 +1799,8 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
         if match_data and match_data.get("data_source") == "zhibo8":
             source = _find_source_article(topic, match_data)
             if source and source.get("fixture", {}).get("source_images"):
-                source_imgs = source["fixture"]["source_images"][:1]
+                max_images = int(os.environ.get("MAX_ARTICLE_IMAGES", "1" if CONTENT_APP == "finance" else "3"))
+                source_imgs = source["fixture"]["source_images"][:max_images]
                 print(f"   📷 使用源文章配图: {len(source_imgs)} 张")
 
         if source_imgs:
@@ -1951,7 +1953,8 @@ def main():
         # Columns are fixed per batch — no season weight type swapping
         # Season weights only affect topic selection framing, not column identity
         column_names = [s["column_name"] for s in slots]
-        print(f"财经内容自动化 - {date_str} (batch={batch_mode}, 栏目={', '.join(column_names)}, {batch_cfg['name']}·{batch_cfg['time']})\n")
+        app_label = "财经内容" if CONTENT_APP == "finance" else "岛哥侃篮球"
+        print(f"{app_label}自动化 - {date_str} (batch={batch_mode}, 栏目={', '.join(column_names)}, {batch_cfg['name']}·{batch_cfg['time']})\n")
         target_types = None  # Column-driven, not type-driven
     start_time = time.time()
     log.info(f"开始执行 — 日期:{date_str} 批次:{batch_mode}")
@@ -2003,7 +2006,8 @@ def main():
         has_matches = match_data.get("total_matches", 0) > 0
         has_news_articles = bool(match_data.get("news_articles"))
         if match_data.get("data_source") not in ("zhibo8", "worldnews", "toutiao_ai") or not has_news_articles:
-            result_msg = f"无可用财经源文章 (data_source={match_data.get('data_source')})"
+            content_label = "财经" if CONTENT_APP == "finance" else "NBA"
+            result_msg = f"无可用{content_label}源文章 (data_source={match_data.get('data_source')})"
             print(f"   ❌ {result_msg}")
             send_wxpusher("NBA自媒体 ⚠️", f"{date_str} 发文任务中止：{result_msg}")
             return
@@ -2140,9 +2144,11 @@ def main():
 
     # Notify on generation result
     if success and stats["valid"] > 0:
-        send_wxpusher("财经内容 📝", f"{date_str} 文章生成完成\n\n{result_msg}")
+        notify_label = "财经内容" if CONTENT_APP == "finance" else "岛哥侃篮球"
+        send_wxpusher(f"{notify_label} 📝", f"{date_str} 文章生成完成\n\n{result_msg}")
     elif not success or stats["valid"] == 0:
-        send_wxpusher("财经内容 ❌", f"{date_str} 文章生成失败\n\n{result_msg}")
+        notify_label = "财经内容" if CONTENT_APP == "finance" else "岛哥侃篮球"
+        send_wxpusher(f"{notify_label} ❌", f"{date_str} 文章生成失败\n\n{result_msg}")
         sys.exit(1)
 
 

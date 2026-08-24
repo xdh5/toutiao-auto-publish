@@ -22,6 +22,9 @@ PROJECT_ROOT = Path(__file__).parent
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 OUTPUT_BASE = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "output"))
 AUTH_FILE = Path(os.environ.get("TOUTIAO_AUTH_FILE", PROJECT_ROOT / "toutiao_auth.json"))
+CONTENT_APP = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
+MAX_ARTICLE_IMAGES = max(0, int(os.environ.get(
+    "MAX_ARTICLE_IMAGES", "3" if CONTENT_APP == "football" else "1")))
 
 # Toutiao URLs
 TOUTIAO_LOGIN = "https://mp.toutiao.com/auth/page/login/"
@@ -645,13 +648,13 @@ def publish_article(page, article, date_str, draft_mode=False):
         page.locator('.ProseMirror').first.click(force=True)
         page.wait_for_timeout(500)
 
-        for i, img_rel in enumerate(images[:1]):
+        for i, img_rel in enumerate(images[:MAX_ARTICLE_IMAGES]):
             img_path = OUTPUT_BASE / date_str / img_rel
             if not img_path.exists():
                 print(f"  ⚠️  图片不存在: {img_path}")
                 continue
 
-            print(f"  上传图片 {i+1}/{min(len(images), 1)}: {img_path.name}...")
+            print(f"  上传图片 {i+1}/{min(len(images), MAX_ARTICLE_IMAGES)}: {img_path.name}...")
 
             try:
                 imgs_before = page.locator('.ProseMirror img').count()
@@ -726,7 +729,7 @@ def publish_article(page, article, date_str, draft_mode=False):
                 imgs_after = page.locator('.ProseMirror img').count()
                 if imgs_after > imgs_before:
                     upload_ok += 1
-                    print(f"    ✅ 上传成功 ({upload_ok}/{min(len(images), 1)}) [编辑器内图片: {imgs_after}]")
+                    print(f"    ✅ 上传成功 ({upload_ok}/{min(len(images), MAX_ARTICLE_IMAGES)}) [编辑器内图片: {imgs_after}]")
                 else:
                     print(f"    ⚠️  图片未插入编辑器")
 

@@ -15,7 +15,7 @@ from constants import (PROJECT_ROOT, OUTPUT_DIR, GZH_SCRIPT,
                        COMPETITION_IDS, GZH_KEYWORD_GROUPS, GZH_TRANSFER_KEYWORDS,
                        GZH_NOISE_PATTERNS, WIKI_PLAYERS, WIKI_TEAMS, FOOTYRENDERS_PLAYERS,
                        UNSPLASH_KEY, NBA_STANDINGS_URL, NBA_PLAYERS_URL,
-                       WORLD_NEWS_API_KEY, WORLD_NEWS_URL)
+                       WORLD_NEWS_API_KEY, WORLD_NEWS_URL, CONTENT_APP)
 
 from utils import retry
 
@@ -26,7 +26,9 @@ from utils import retry
 
 
 def collect_real_matches(date_str, batch_mode="morning"):
-    """三批次均采集财经/科技新闻；中午海外，早晚国内。"""
+    """按 CONTENT_APP 选择财经新闻或 NBA 数据源。"""
+    if CONTENT_APP == "football":
+        return _collect_real_matches_nba(date_str)
     return _collect_finance_news(date_str, batch_mode)
 
 
@@ -114,7 +116,7 @@ def _collect_finance_news(date_str, batch_mode):
 
 
 def _collect_real_matches_nba(date_str):
-    """保留原NBA采集实现，财经入口不再调用。"""
+    """采集指定日期 NBA 比赛、战报与新闻。"""
     print(f"[1/5] 采集 NBA 比赛与新闻 ({date_str})...")
     from media_scraper import SportsScraper
 

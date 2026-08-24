@@ -17,8 +17,11 @@ from pathlib import Path
 today = os.environ.get("TODAY", "")
 expected = os.environ.get("EXPECTED", "morning noon evening")
 expected = set(expected.split()) if expected.strip() else set()
+content_app = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
 
-meta_path = Path("output") / today / "metadata.json"
+meta_path = Path("output") / content_app / today / "metadata.json"
+if content_app == "finance" and not meta_path.exists():
+    meta_path = Path("output") / today / "metadata.json"
 
 if not meta_path.exists():
     # All expected batches are missing

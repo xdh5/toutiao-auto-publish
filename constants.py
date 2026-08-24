@@ -11,6 +11,10 @@ from dotenv import load_dotenv
 # 本地开发自动读取项目根目录 .env；系统环境变量/GitHub Secrets 优先。
 load_dotenv(Path(__file__).parent / ".env", override=False)
 
+CONTENT_APP = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
+if CONTENT_APP not in {"finance", "football"}:
+    raise ValueError(f"CONTENT_APP 必须是 finance 或 football，当前为: {CONTENT_APP}")
+
 # --- Paths ---
 PROJECT_ROOT = Path(__file__).parent
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "output"))
@@ -134,7 +138,7 @@ BATCH_TYPES = {
 #   "gzh_preferred"   = try GZH first, enrich with match context if available
 #   "gzh_only"         = always use GZH pool regardless of match availability
 
-BATCH_CONFIG = {
+FOOTBALL_BATCH_CONFIG = {
     "morning": {
         "name": "晨读",
         "time": "08:00",
@@ -397,7 +401,7 @@ WEEKLY_COLUMNS = {
 }
 
 # 财经版只替换栏目内容；调度、选图、保存和发布仍使用原流程。
-BATCH_CONFIG = {
+FINANCE_BATCH_CONFIG = {
     "morning": {
         "name": "晨读", "time": "08:00", "reader_scenario": "早间国内商业资讯",
         "overall_tone": "简洁、客观、信息密度高",
@@ -425,3 +429,6 @@ BATCH_CONFIG = {
 }
 
 CONTENT_TYPE_TO_COLUMN.update({"国内商业": "国内商业", "海外商业": "海外商业", "科技动态": "科技动态"})
+
+# 两套业务共用生成、选图和发布实现，仅在运行时选择业务栏目。
+BATCH_CONFIG = FOOTBALL_BATCH_CONFIG if CONTENT_APP == "football" else FINANCE_BATCH_CONFIG
