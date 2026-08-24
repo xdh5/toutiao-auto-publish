@@ -75,3 +75,34 @@ def test_generate_morning_micro_uses_article_content_type(tmp_path, monkeypatch)
     draft = micro_publisher.generate_draft("2026-08-25", "morning")
 
     assert draft["content_type"] == "新闻微头条"
+
+
+def test_generate_micro_retries_when_first_draft_is_too_short(tmp_path, monkeypatch):
+    valid = _valid_content()
+    responses = iter([
+        json.dumps({"content": "太短了。\n\n#财经新闻#"}, ensure_ascii=False),
+        json.dumps({"content": valid}, ensure_ascii=False),
+    ])
+    calls = []
+    monkeypatch.setattr(micro_publisher, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(
+        micro_publisher,
+        "load_articles",
+        lambda *args, **kwargs: [{
+            "title": "国内企业公布新计划",
+            "body": valid,
+            "file": "article.md",
+            "meta": {"content_type": "国内商业"},
+        }],
+    )
+
+    def fake_llm(*args, **kwargs):
+        calls.append(args)
+        return next(responses)
+
+    monkeypatch.setattr(micro_publisher, "call_llm", fake_llm)
+
+    draft = micro_publisher.generate_draft("2026-08-25", "morning")
+
+    assert draft["content"] == valid
+    assert len(calls) == 2

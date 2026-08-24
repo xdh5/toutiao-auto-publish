@@ -953,16 +953,13 @@ def _rewrite_finance_article(topic, source, retry_hint=""):
     fixture = source.get("fixture") or {}
     source_title = fixture.get("article_title") or topic.get("title", "")
     is_suggestion = fixture.get("source") == "toutiao_ai"
-    short_source = len(source_text) <= 500 and not is_suggestion
     length_rule = ("围绕这个创作话题，以一位经历过工作、家庭和生活起伏的中年人第一人称，一次性写成原创生活分享，不做新闻改写。文章要励志，并自然结合普通人挣钱、攒钱、增加收入、摆脱贫困和追求财富自由的经历与思考。要有具体日常场景、遇到的难处、一次认知或行动转折，以及后来明白的道理；语气朴实、克制、真诚，像饭后和朋友聊天，不装专家、不写新闻腔、不喊口号、不堆空洞鸡汤。不得承诺暴富，不荐股，不编造收益、公共新闻、真实名人经历、调查、统计数字或引语。正文必须写成6个完整自然段，每段约80—100个汉字，总计严格控制在450—550个汉字；输出前自行估算，少于450个汉字禁止结束。主标题和备选标题都必须为2—30个汉字，标题要有吸引力，采用“现实困境或疑问 + 转折或意外发现”的表达，让人想点开，但不得标题党、夸大或虚构。"
                    if is_suggestion else
-                   ("正文不超过500字，程序将直接使用原标题和原文；article只需返回keywords英文搜图词。"
-                   if short_source else
-        "把正文压缩到约500字，可用2-3个Markdown小标题，不得增加来源外信息；最终字数不作为审核条件。"))
+                   "无论来源长短或语言，都要写成450—550个实际中文字符的完整中文新闻正文。由于模型常低估字数，写作时请按内部目标600—700字准备素材，最终输出必须写成7个完整自然段，每段约70—80个实际中文字符，不使用Markdown小标题。英文素材必须准确翻译为自然中文，标题也必须是2—30个汉字的中文标题。第一段概括核心消息，中间五段依次解释来源中的主要事实、数据、关系和背景，最后一段说明这条消息对普通读者理解相关行业或市场的意义。来源较短时可以加入不含新人物、新机构、新数字和新事件的常识性解释与分析，但不得编造具体事实或引语；来源较长时压缩到规定字数。输出前逐字计算，实际少于450字或超过550字都禁止结束。")
     role_intro = ("你是一位擅长写中年人生活、挣钱与成长经历的自媒体作者。输入内容是头条创作助手推荐的话题，不是新闻素材。"
                   if is_suggestion else "你是中国商业新闻编辑。素材已属于business或technology。")
     fact_constraint = ("允许用不指向任何真实个人的第一人称生活化叙事来承载观点；不得把故事包装成可核验的真实新闻，也不得编造具体收益、调查、统计数字、真实人物或引语。"
-                       if is_suggestion else "数字、人物、机构、日期、引语和因果只能来自素材。")
+                       if is_suggestion else "具体数字、人物、机构、日期、引语和事件只能来自素材；允许加入不含新增具体事实的常识性解释和分析。")
     prompt = f"""{role_intro}
 {length_rule}
 {fact_constraint}{('上次失败：' + retry_hint) if retry_hint else ''}
@@ -979,42 +976,33 @@ article必须返回完整对象，禁止返回null。
     generated = first.get("article")
     if not isinstance(generated, dict):
         raise ValueError("千问未返回article")
-    if short_source:
-        article = {**generated, "title": source_title, "backup_title": source_title,
-                   "content": source_text, "source_verbatim": True}
-    else:
-        article = dict(generated)
-        article["source_verbatim"] = False
+    article = dict(generated)
+    article["source_verbatim"] = False
 
-    if is_suggestion:
-        title = str(article.get("title", "")).strip()
-        backup_title = str(article.get("backup_title", "")).strip()
-        if not 2 <= len(title) <= 30 and 2 <= len(backup_title) <= 30:
-            article["title"] = backup_title
-        elif len(title) > 30:
-            article["title"] = title[:30].rstrip("，。！？、；：—- '‘’“”")
+    title = str(article.get("title", "")).strip()
+    backup_title = str(article.get("backup_title", "")).strip()
+    if not 2 <= len(title) <= 30 and 2 <= len(backup_title) <= 30:
+        article["title"] = backup_title
+        title = backup_title
+    if not 2 <= len(title) <= 30:
+        raise ValueError(f"标题长度为{len(title)}字，应为2—30字")
+    if not is_suggestion and not re.search(r"[\u4e00-\u9fff]", title):
+        raise ValueError("新闻标题不是中文")
 
-        content = str(article.get("content", "")).strip()
-        compact_len = len(re.sub(r"\s+", "", content))
-        if compact_len < 450:
-            raise ValueError(f"原创正文仅{compact_len}字，未达到450字最低要求")
-        if compact_len > 550:
-            cutoff = 0
-            for match in re.finditer(r"[。！？]", content):
-                candidate = content[:match.end()].strip()
-                candidate_len = len(re.sub(r"\s+", "", candidate))
-                if 450 <= candidate_len <= 550:
-                    cutoff = match.end()
-            if cutoff:
-                article["content"] = content[:cutoff].strip()
+    content = str(article.get("content", "")).strip()
+    compact_len = len(re.sub(r"\s+", "", content))
+    if not 450 <= compact_len <= 550:
+        raise ValueError(f"正文为{compact_len}字，应为450—550字")
+    if not is_suggestion and not re.search(r"[\u4e00-\u9fff]", content):
+        raise ValueError("新闻正文不是中文")
 
     fact_rule = ("这是观点文章，允许围绕话题进行常识性分析和价值判断；但不得虚构具体新闻、真实人物经历、调查结论、统计数字或引语。"
                  if is_suggestion else
-                 "所有人物、机构、数字、日期、比例、引语和因果均须来自来源。")
+                 "只核对可客观比对的具体人物、身份、机构、数字、日期、比例、直接引语和事件是否与来源一致；普通解释、概括、影响分析、措辞选择和价值判断不属于事实错误，不得因此拒绝。")
     review_prompt = f"""你是独立发布审核员，只对照本次来源，不使用外部知识。
-检查所有人物、机构、数字、日期、比例、引语和因果均来自来源，标题不夸大。
+只检查可客观比对的具体人物、身份、机构、数字、日期、比例、直接引语和事件是否与来源一致，标题是否明显捏造具体事实。普通解释、概括、影响分析、措辞选择、中文翻译方式和价值判断一律不得列入issues，也不得导致拒绝。
 事实规则：{fact_rule}
-只有全部明确通过才passed=true。只输出JSON：
+当具体事实没有错误时，passed、facts_ok、source_ok、title_ok必须全部为true。只输出JSON：
 {{"passed":false,"facts_ok":false,"source_ok":false,"title_ok":false,"issues":[]}}
 来源媒体：{fixture.get('source_name','')}
 来源链接：{fixture.get('source_url','')}
@@ -1388,10 +1376,9 @@ def generate_article_with_retry(topic, match_context, index, max_retries=2, date
                 topic.update(candidate_topic)
                 return art, None
             errors.append(f"{article.get('title', '')[:30]}: {error}")
-            if _is_http_400_error(error):
-                print(f"   ⚠️ 第{position}篇触发千问 HTTP 400，自动换下一篇新闻")
-                continue
-            return {}, error
+            reason = "触发千问 HTTP 400" if _is_http_400_error(error) else "连续重写仍未通过"
+            print(f"   ⚠️ 第{position}篇{reason}，自动换下一篇新闻")
+            continue
         return {}, "所有候选新闻均不可用：" + " | ".join(errors)
 
     source = _find_source_article(topic, match_context)
@@ -1464,7 +1451,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
     print(f"\n[4/5] 保存文章...")
     image_service = ImageService(config={
         "images": {"min_width": 800, "min_height": 600, "max_size_bytes": 5242880,
-                   "min_size_bytes": 51200, "max_per_article": 5, "required_per_article": 3}})
+                   "min_size_bytes": 51200, "max_per_article": 5, "required_per_article": 1}})
     file_writer = FileWriter(base_dir=str(OUTPUT_DIR))
 
     date_dir = OUTPUT_DIR / date_str
@@ -1484,7 +1471,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
         if i in pre_downloaded:
             # Use pre-downloaded (already cropped) images
             for img_info in pre_downloaded[i]:
-                if len(downloaded) >= 3:
+                if len(downloaded) >= 1:
                     break
                 if img_info.get("md5"):
                     all_hashes.add(img_info["md5"])
@@ -1493,7 +1480,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
             # Download images from URLs
             img_urls = [img["url"] for img in images_map.get(i, [])[:5]]
             for j, url in enumerate(img_urls):
-                if len(downloaded) >= 3:
+                if len(downloaded) >= 1:
                     break
                 if not url or not url.startswith("http"):
                     continue
@@ -1811,7 +1798,7 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
         if match_data and match_data.get("data_source") == "zhibo8":
             source = _find_source_article(topic, match_data)
             if source and source.get("fixture", {}).get("source_images"):
-                source_imgs = source["fixture"]["source_images"][:3]
+                source_imgs = source["fixture"]["source_images"][:1]
                 print(f"   📷 使用源文章配图: {len(source_imgs)} 张")
 
         if source_imgs:

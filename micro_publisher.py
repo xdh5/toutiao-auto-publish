@@ -58,7 +58,7 @@ def generate_draft(date_str, batch):
                    if is_news else
                    """这是一篇由头条AI第一条推荐话题生成的中年生活文章。压缩成第一人称生活微头条，保留具体场景、现实困境、行动转折和真实感悟；整体积极励志，可自然保留原文中挣钱、攒钱、普通人翻身或财富自由的内容，但不承诺暴富、不荐股、不鼓励借贷投机。""")
 
-    prompt = f"""把下面这篇文章一次性改写成可直接发布的{('新闻' if is_news else '生活')}类微头条。
+    base_prompt = f"""把下面这篇文章改写成可直接发布的{('新闻' if is_news else '生活')}类微头条。
 
 硬性要求：
 1. {style_rules}
@@ -72,18 +72,30 @@ def generate_draft(date_str, batch):
 原文正文：
 {source_body[:7000]}
 """
-    raw = call_llm(
-        DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-        [
-            {"role": "system", "content": "你是严谨的今日头条短内容编辑，只输出JSON。"},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.35,
-        max_tokens=1800,
-    )
-    result = safe_json_loads(raw)
-    content = str(result.get("content") or "").strip()
-    _validate_content(content, source_body)
+    content = ""
+    last_error = ""
+    for attempt in range(3):
+        retry_note = (f"\n上一次生成未通过：{last_error}。这次必须修正并重新输出完整正文。"
+                      if last_error else "")
+        raw = call_llm(
+            DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
+            [
+                {"role": "system", "content": "你是严谨的今日头条短内容编辑，只输出JSON。"},
+                {"role": "user", "content": base_prompt + retry_note},
+            ],
+            temperature=0.3,
+            max_tokens=1800,
+        )
+        result = safe_json_loads(raw)
+        content = str(result.get("content") or "").strip()
+        try:
+            _validate_content(content, source_body)
+            break
+        except ValueError as exc:
+            last_error = str(exc)
+            if attempt == 2:
+                raise
+            print(f"微头条第{attempt + 1}次生成未通过，自动重写：{last_error}")
 
     output_dir = OUTPUT_DIR / date_str
     output_dir.mkdir(parents=True, exist_ok=True)
