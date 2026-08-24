@@ -1,7 +1,7 @@
 {
   "date": "2026-08-24",
-  "generated_at": "2026-08-24T00:38:49.903618",
-  "total_articles": 1,
+  "generated_at": "2026-08-24T01:53:47.474954",
+  "total_articles": 2,
   "articles": [
     {
       "index": 1,
@@ -36,11 +36,45 @@
       "column_id": "ai-topic-morning",
       "column_name": "AI创作话题",
       "batch_name": "晨读"
+    },
+    {
+      "index": 1,
+      "title": "退休后靠谁？我攒下37万才敢说不求人",
+      "path": "/home/runner/work/_temp/output/2026-08-24/article-1-退休后靠谁我攒下-af3fe8.md",
+      "slug": "退休后靠谁我攒下-af3fe8",
+      "tags": [
+        "middle-aged man working",
+        "home office setup",
+        "mobile editing tutorial",
+        "family financial stress",
+        "skill learning motivation"
+      ],
+      "keywords": [
+        "middle-aged man working",
+        "home office setup",
+        "mobile editing tutorial",
+        "family financial stress",
+        "skill learning motivation"
+      ],
+      "images": [
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-001.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-002.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-003.jpg"
+      ],
+      "sources_used": [
+        "头条创作助手"
+      ],
+      "source_post": "",
+      "originality_note": "",
+      "content_type": "AI话题",
+      "column_id": "ai-topic-morning",
+      "column_name": "AI创作话题",
+      "batch_name": "晨读"
     }
   ],
   "topics": [
     {
-      "title": "人到中年，除了钱什么最重要了",
+      "title": "人老后，什么才是你的底气",
       "angle": "严格依据原文",
       "keywords": [
         "middle aged life",
@@ -50,7 +84,7 @@
       "keywords_cn": [],
       "content_type": "AI话题",
       "score": 100,
-      "_source_article_id": "toutiao-2026-08-24-morning-人到中年，除了钱什么最重要了",
+      "_source_article_id": "toutiao-2026-08-24-morning-人老后，什么才是你的底气",
       "_finance": true,
       "_column_id": "ai-topic-morning",
       "_column_name": "AI创作话题",
@@ -72,5 +106,6 @@
       "_overall_tone": "简洁、客观、信息密度高"
     }
   ],
-  "data_sources": {}
+  "data_sources": {},
+  "batches_completed": []
 }
