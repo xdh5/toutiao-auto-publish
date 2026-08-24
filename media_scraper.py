@@ -386,10 +386,6 @@ class SportsScraper:
         except Exception:
             return False
 
-    def scrape_football_news(self, date_str: str = None, max_articles: int = 20) -> list[dict]:
-        """兼容旧函数名：获取直播吧 NBA 新闻/文章列表。"""
-        return self.scrape_basketball_news(date_str=date_str, max_articles=max_articles)
-
     def scrape_basketball_news(self, date_str: str = None, max_articles: int = 20) -> list[dict]:
         """获取直播吧 NBA 新闻/文章列表（非比赛战报）。
 
@@ -522,7 +518,7 @@ class SportsScraper:
         if schedule:
             # 只解析带 data-type/league 标签的条目；全站链接无法可靠区分NBA与WNBA。
             for li in self._find_all_fallback(schedule, self.ZHIBO8_FOOTBALL_ITEM_SELS):
-                self._parse_football_li(li, date_str, matches, seen_urls)
+                self._parse_basketball_li(li, date_str, matches, seen_urls)
 
         # 不从全页新闻标题反推比赛：普通NBA新闻中的金额（如300-400万）
         # 很容易被误识别为比分。比赛只以带赛事标签的 schedule 条目为准。
@@ -532,8 +528,8 @@ class SportsScraper:
 
         return matches
 
-    def _parse_football_li(self, li, date_str: str, matches: list, seen_urls: set):
-        """兼容旧函数名：从 basketball 条目解析 NBA 比赛信息。"""
+    def _parse_basketball_li(self, li, date_str: str, matches: list, seen_urls: set):
+        """从篮球赛程条目解析 NBA 比赛信息。"""
 
         # 取赛事名，并在解析入口排除非 NBA 篮球赛事。
         league_el = self._select_one_fallback(li, self.ZHIBO8_LEAGUE_SELS)
@@ -835,7 +831,7 @@ class SportsScraper:
             "home_score": home_score,
             "away_score": away_score,
             "league": league,
-            "goals": [],  # 兼容旧数据结构
+            "goals": [],
             "player_stats": player_stats,
             "data_confidence": "high",
             "images": images,

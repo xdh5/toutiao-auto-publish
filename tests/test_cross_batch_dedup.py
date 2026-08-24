@@ -343,23 +343,6 @@ def test_hupu_pipeline_extracted():
     print("  PASS test_hupu_pipeline_extracted")
 
 
-def test_gzh_no_hardcoded_tmp():
-    """#7 bugfix: GZH collection must use OUTPUT_DIR, not hardcoded /tmp/ path.
-
-    Using /tmp/ for intermediate files is fragile (can fill up, clash with
-    parallel runs). Changed to OUTPUT_DIR/gzh_cache/ for project-scoped temp files.
-    """
-    from pathlib import Path
-    dc_file = Path(__file__).parent.parent / "data_collector.py"
-    src = dc_file.read_text()
-    idx = src.find("def fetch_gzh_football_trends")
-    assert idx > 0, "fetch_gzh_football_trends not found"
-    fn_src = src[idx:idx + 1500]
-    assert 'gzh_cache' in fn_src, "gzh_cache directory should be used"
-    assert '/tmp/gzh_' not in fn_src, "Hardcoded /tmp/ path should be removed"
-    print("  PASS test_gzh_no_hardcoded_tmp")
-
-
 def test_image_marker_cleanup():
     """#8 bugfix: auto-generated 配图 markers must be stripped before re-injection.
 
@@ -418,7 +401,6 @@ if __name__ == "__main__":
         ("#3 bugfix: shared article-gen helper exists", test_generate_articles_from_topics_exists),
         ("#5 bugfix: FALLBACK_MAP imported, not redefined", test_fallback_map_imported_not_redefined),
         ("#4 bugfix: Hupu pipeline extracted", test_hupu_pipeline_extracted),
-        ("#7 bugfix: GZH cache dir, not /tmp/", test_gzh_no_hardcoded_tmp),
         ("#8 bugfix: 配图 markers stripped before re-inject", test_image_marker_cleanup),
     ]
 

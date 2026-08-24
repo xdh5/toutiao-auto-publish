@@ -8,8 +8,7 @@ runs:
     must NOT be treated as missing.
   - 终检 (final, ~22:17 CST): all three batches should be done.
 
-Pass the expected set via the EXPECTED env var (space-separated). Defaults to
-all three for backwards compatibility.
+Pass the expected set via the EXPECTED env var (space-separated).
 """
 import json, os, sys
 from pathlib import Path
@@ -20,8 +19,6 @@ expected = set(expected.split()) if expected.strip() else set()
 content_app = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
 
 meta_path = Path("output") / content_app / today / "metadata.json"
-if content_app == "finance" and not meta_path.exists():
-    meta_path = Path("output") / today / "metadata.json"
 
 if not meta_path.exists():
     # All expected batches are missing

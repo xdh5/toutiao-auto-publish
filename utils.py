@@ -52,14 +52,8 @@ def retry(func, *args, max_retries=3, base_delay=2, desc="API", **kwargs):
     raise last_err
 
 
-def call_llm(url, api_key, model, messages, temperature=0.7, max_tokens=4096, timeout=120,
-             fallback_url=None, fallback_key=None, fallback_model=None):
-    """Call LLM with optional fallback to another provider on auth/credit errors.
-
-    When the primary provider returns 401/402/403/404, automatically retry
-    with the fallback provider. Set fallback_url/fallback_key/fallback_model
-    to enable this behavior (e.g. hy3/Hunyuan → Qwen on quota exhaustion).
-    """
+def call_llm(url, api_key, model, messages, temperature=0.7, max_tokens=4096, timeout=120):
+    """调用唯一配置的 LLM，不跨供应商降级。"""
     def _call(u, k, m):
         resp = requests.post(u, json={
             "model": m, "messages": messages, "temperature": temperature,
@@ -68,19 +62,9 @@ def call_llm(url, api_key, model, messages, temperature=0.7, max_tokens=4096, ti
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
 
-    # 主服务未配置时直接使用备用服务，避免先发一个必然失败的空密钥请求。
-    if not api_key and fallback_url and fallback_key and fallback_model:
-        print(f"   ℹ️ 未配置 LLM({model})，直接使用 {fallback_model}")
-        return retry(lambda: _call(fallback_url, fallback_key, fallback_model), desc=f"LLM({fallback_model})")
-
-    try:
-        return retry(lambda: _call(url, api_key, model), desc=f"LLM({model})")
-    except requests.exceptions.HTTPError as e:
-        status = e.response.status_code if e.response is not None else None
-        if status in (401, 402, 403, 404) and fallback_url and fallback_key and fallback_model:
-            print(f"   ⚠️ LLM({model}) HTTP {status}，自动降级至 {fallback_model}")
-            return retry(lambda: _call(fallback_url, fallback_key, fallback_model), desc=f"LLM({fallback_model})")
-        raise
+    if not api_key:
+        raise RuntimeError("缺少 DASHSCOPE_API_KEY")
+    return retry(lambda: _call(url, api_key, model), desc=f"LLM({model})")
 
 
 def safe_json_loads(text):

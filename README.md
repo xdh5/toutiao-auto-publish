@@ -45,19 +45,18 @@ python micro_publisher.py 2026-08-24 --batch=morning
 
 | 名称 | 用途 |
 |---|---|
-| `FINANCE_TOUTIAO_AUTH_GZ` | 财经头条号登录状态；暂时兼容旧 `TOUTIAO_AUTH_GZ` |
+| `FINANCE_TOUTIAO_AUTH_GZ` | 财经头条号登录状态 |
 | `FOOTBALL_TOUTIAO_AUTH_GZ` | 篮球头条号登录状态 |
-| `FINANCE_DASHSCOPE_API_KEY` | 财经通义千问；暂时兼容旧 `DASHSCOPE_API_KEY` |
-| `FOOTBALL_DASHSCOPE_API_KEY` | 篮球通义千问；未配置时兼容共用旧密钥 |
-| `FINANCE_WORLD_NEWS_API_KEY` | 财经 World News；暂时兼容旧 `WORLD_NEWS_API_KEY` |
-| `FINANCE_UNSPLASH_ACCESS_KEY` | 财经配图；暂时兼容旧 `UNSPLASH_ACCESS_KEY` |
-| `FOOTBALL_UNSPLASH_ACCESS_KEY` | 篮球配图；未配置时兼容共用旧密钥 |
+| `FINANCE_DASHSCOPE_API_KEY` | 财经通义千问 |
+| `FOOTBALL_DASHSCOPE_API_KEY` | 篮球通义千问 |
+| `FINANCE_WORLD_NEWS_API_KEY` | 财经 World News |
+| `FINANCE_UNSPLASH_ACCESS_KEY` | 财经配图 |
+| `FOOTBALL_UNSPLASH_ACCESS_KEY` | 篮球配图 |
 
 GitHub 的统一批次工作流支持单独选择 `app` 和 `batch`，也支持 `app=both`。自动早、午、晚批次会同时为财经和篮球准备任务，两个账号进入共同并发队列逐个发布，不会同时操作头条后台。工作流界面分为“1. 准备任务 → 2. 写文章 → 3. 发布”三个阶段。
 
 | `WXPUSHER_APPTOKEN` | 运行结果通知，可选 |
 | `WXPUSHER_UID` | 通知接收人，可选 |
-| `HY3_API_KEY` | 旧流程兼容模型，可选 |
 
 本地 `.env` 与 `toutiao_auth.json` 已被 Git 忽略，不会提交到仓库。
 

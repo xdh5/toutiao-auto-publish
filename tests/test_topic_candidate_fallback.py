@@ -19,7 +19,7 @@ def test_direct_news_topics_prefer_articles_with_body():
     assert topics[0]["_source_url"] == "https://example.com/2"
 
 
-def test_direct_news_topics_use_legacy_football_dedup_rule():
+def test_direct_news_topics_use_shared_title_dedup_rule():
     topics = orchestrator._build_direct_news_topics(
         {
             "news_articles": [
@@ -34,14 +34,14 @@ def test_direct_news_topics_use_legacy_football_dedup_rule():
     assert [topic["title"] for topic in topics] == ["勇士公布新赛季训练计划"]
 
 
-def test_finance_and_football_share_legacy_source_filter():
+def test_finance_and_football_share_source_filter():
     articles = [
         {"title": "国内企业发布季度经营情况", "url": "https://example.com/old"},
         {"title": "国内企业发布季度经营情况，收入继续增长", "url": "https://example.com/same"},
         {"title": "海外消费品牌公布新计划", "url": "https://example.com/new"},
     ]
 
-    filtered = orchestrator._filter_news_by_legacy_dedup(
+    filtered = orchestrator._filter_news_by_source_history(
         articles, {"国内企业发布季度经营情况"}
     )
 

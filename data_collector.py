@@ -4,16 +4,15 @@
 负责: 比赛数据采集、公众号爆款趋势、积分榜/射手榜、图片搜索。
 """
 
-import os, json, sys, subprocess, requests, time, re
+import os, json, requests, time, re
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
 
-from constants import (PROJECT_ROOT, OUTPUT_DIR, GZH_SCRIPT,
+from constants import (PROJECT_ROOT, OUTPUT_DIR,
                        FOOTBALL_DATA_KEY, FOOTBALL_DATA_BASE,
-                       COMPETITION_IDS, GZH_KEYWORD_GROUPS, GZH_TRANSFER_KEYWORDS,
-                       GZH_NOISE_PATTERNS, WIKI_PLAYERS, WIKI_TEAMS, FOOTYRENDERS_PLAYERS,
+                       COMPETITION_IDS, WIKI_PLAYERS, WIKI_TEAMS, FOOTYRENDERS_PLAYERS,
                        UNSPLASH_KEY, NBA_STANDINGS_URL, NBA_PLAYERS_URL,
                        WORLD_NEWS_API_KEY, WORLD_NEWS_URL, CONTENT_APP)
 
@@ -597,15 +596,6 @@ def _fetch_wikipedia_wc_scores():
 # GZH Trending
 # ============================================================
 
-def _is_football_relevant(article):
-    """兼容旧函数名：过滤非 NBA 内容。"""
-    title = (article.get("title", "") or "") + (article.get("summary", "") or "")
-    for pattern in GZH_NOISE_PATTERNS:
-        if pattern in title:
-            return False
-    return True
-
-
 def get_previously_used_sources(current_date, lookback_days=3):
     used = set()
     today = datetime.strptime(current_date, "%Y-%m-%d")
@@ -666,84 +656,6 @@ def get_topic_history(current_date, lookback_days=7):
         print(f"   历史去重: 近{lookback_days}天 {len(history['titles'])} 篇, "
               f"覆盖球队 {len(history['teams'])} 支, 球员 {len(history['players'])} 人")
     return history
-
-
-def fetch_gzh_football_trends(date_str, keyword_groups=None, fallback_match_data=None):
-    print(f"[数据] 从公众号爆款库采集NBA话题 ({date_str})...")
-    target_date = datetime.strptime(date_str, "%Y-%m-%d")
-    start_date = (target_date - timedelta(days=1)).strftime("%Y-%m-%d")
-    all_raw = []
-    kw_groups = keyword_groups if keyword_groups is not None else GZH_KEYWORD_GROUPS
-
-    gzh_cache = OUTPUT_DIR / "gzh_cache"
-    gzh_cache.mkdir(parents=True, exist_ok=True)
-
-    for kw in kw_groups:
-        try:
-            safe_name = re.sub(r'[^a-zA-Z0-9_一-鿿]', '_', kw)[:30]
-            output_file = str(gzh_cache / f"gzh_{safe_name}.json")
-            cmd = [sys.executable, GZH_SCRIPT, "--keyword", kw, "--start-date", start_date,
-                   "--output-format", "json", "--output-file", output_file]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            if result.returncode == 0:
-                if os.path.exists(output_file):
-                    data = json.loads(Path(output_file).read_text())
-                    for item in data.get("items", []):
-                        if _is_football_relevant(item):
-                            all_raw.append(item)
-                    # Clean up temp file after reading
-                    try:
-                        Path(output_file).unlink()
-                    except OSError:
-                        pass
-        except Exception as e:
-            print(f"   搜索'{kw[:20]}'失败: {e}")
-
-    # Clean up stale cache files (>1 day old)
-    try:
-        cutoff = time.time() - 86400
-        for f in gzh_cache.glob("gzh_*.json"):
-            if f.stat().st_mtime < cutoff:
-                f.unlink()
-    except Exception:
-        pass
-
-    if not all_raw:
-        print("   公众号爆款库未找到NBA相关文章")
-        if fallback_match_data:
-            print("   ⚠️ GZH爆款库不可用，尝试从比赛数据构造备选热点...")
-            return fetch_fallback_trends(fallback_match_data)
-        return []
-
-    seen = set()
-    unique = []
-    for a in all_raw:
-        t = a.get("title", "")[:40]
-        if t and t not in seen:
-            seen.add(t)
-            unique.append(a)
-    unique.sort(key=lambda x: x.get("dataScore", 0), reverse=True)
-
-    used_sources = get_previously_used_sources(date_str)
-    if used_sources:
-        filtered = []
-        for a in unique:
-            title = a.get("title", "")[:40]
-            if title in used_sources:
-                continue
-            is_dup = any(len(u) >= 10 and (u[:20] in title or title[:20] in u) for u in used_sources)
-            if not is_dup:
-                filtered.append(a)
-        unique = filtered
-
-    if not unique and fallback_match_data:
-        print("   ⚠️ GZH爆款库文章全部去重，从比赛数据补充备选热点...")
-        return fetch_fallback_trends(fallback_match_data)
-
-    print(f"   采集到 {len(unique)} 篇真实NBA爆款文章")
-    for i, a in enumerate(unique[:10]):
-        print(f"   {i+1}. [{a.get('clicksCount', '?')}阅读] {a.get('title', '')[:60]} — {a.get('accountName', '?')}")
-    return unique
 
 
 def fetch_fallback_trends(match_data, standings=None):

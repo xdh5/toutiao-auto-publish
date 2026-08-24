@@ -13,8 +13,12 @@ on:
 jobs:
   heartbeat:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [finance, football]
     env:
-      CONTENT_APP: finance
+      CONTENT_APP: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
 
@@ -36,13 +40,12 @@ jobs:
         id: check
         run: |
           TODAY=$(TZ='Asia/Shanghai' date +%Y-%m-%d)
-          META="output/finance/${TODAY}/metadata.json"
-          if [ ! -f "$META" ]; then META="output/${TODAY}/metadata.json"; fi
+          META="output/${{ matrix.app }}/${TODAY}/metadata.json"
           EXPECTED="${{ steps.period.outputs.expect }}"
           echo "today=$TODAY" >> $GITHUB_OUTPUT
           echo "expect=$EXPECTED" >> $GITHUB_OUTPUT
 
-          echo "📋 finance 调度健康检查 — ${TODAY}（时段: ${{ steps.period.outputs.period }}，应完成: ${EXPECTED}）"
+          echo "📋 ${{ matrix.app }} 调度健康检查 — ${TODAY}（时段: ${{ steps.period.outputs.period }}，应完成: ${EXPECTED}）"
           echo ""
 
           if [ ! -f "$META" ]; then
@@ -80,14 +83,14 @@ jobs:
           EXPECTED="${{ steps.check.outputs.expect }}"
 
           if [ "$STATUS" = "all_missing" ]; then
-            TITLE="🚨 finance 调度告警"
-            BODY="${TODAY} finance 今日应完成批次（${EXPECTED}）全部缺失！请检查 GitHub Actions 状态。"
+            TITLE="🚨 ${{ matrix.app }} 调度告警"
+            BODY="${TODAY} ${{ matrix.app }} 今日应完成批次（${EXPECTED}）全部缺失！请检查 GitHub Actions 状态。"
           elif [ "$PERIOD" = "midday" ]; then
-            TITLE="⚠️ finance 午检告警"
-            BODY="${TODAY} finance 晨读批次可能未完成（缺失: ${MISSING}）。请检查 GitHub Actions，必要时手动触发 workflow_dispatch。"
+            TITLE="⚠️ ${{ matrix.app }} 午检告警"
+            BODY="${TODAY} ${{ matrix.app }} 晨读批次可能未完成（缺失: ${MISSING}）。请检查 GitHub Actions，必要时手动触发 workflow_dispatch。"
           else
-            TITLE="⚠️ finance 调度告警"
-            BODY="${TODAY} finance 缺失批次: ${MISSING}（应完成: ${EXPECTED}），已完成批次不受影响，请检查 GitHub Actions。"
+            TITLE="⚠️ ${{ matrix.app }} 调度告警"
+            BODY="${TODAY} ${{ matrix.app }} 缺失批次: ${MISSING}（应完成: ${EXPECTED}），已完成批次不受影响，请检查 GitHub Actions。"
           fi
 
           python3 scripts/send_wxpusher.py "$WXPUSHER_APPTOKEN" "$WXPUSHER_UID" "$TITLE" "$BODY"

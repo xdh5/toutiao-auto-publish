@@ -136,10 +136,9 @@ jobs:
 
       - name: 抓取素材并写文章
         env:
-          HY3_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
-          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
-          WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY || secrets.WORLD_NEWS_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY }}
+          WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY }}
           WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
           WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
         run: |
@@ -257,14 +256,11 @@ jobs:
       - name: 恢复头条登录状态
         if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         env:
-          FINANCE_AUTH_GZ: ${{ secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
+          FINANCE_AUTH_GZ: ${{ secrets.FINANCE_TOUTIAO_AUTH_GZ }}
           FOOTBALL_AUTH_GZ: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ }}
-          FOOTBALL_AUTH_GZ_1: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_1 }}
-          FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
         run: |
           if [ "${{ matrix.app }}" = "football" ]; then
-            if [ -n "$FOOTBALL_AUTH_GZ" ]; then AUTH_GZ="$FOOTBALL_AUTH_GZ"
-            else AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"; fi
+            AUTH_GZ="$FOOTBALL_AUTH_GZ"
           else
             AUTH_GZ="$FINANCE_AUTH_GZ"
           fi
@@ -282,7 +278,7 @@ jobs:
       - name: 发布对应微头条
         if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         env:
-          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY }}
           TOUTIAO_AUTH_FILE: toutiao_auth.json
         run: |
           python micro_publisher.py "${{ needs.prepare.outputs.today }}" \

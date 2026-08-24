@@ -10,10 +10,7 @@ if not today or not batch:
     print("false")
     sys.exit(0)
 
-# daily.yml writes to project-root output/
 meta_path = Path("output") / content_app / today / "metadata.json"
-if content_app == "finance" and not meta_path.exists():
-    meta_path = Path("output") / today / "metadata.json"
 if meta_path.exists():
     meta = json.loads(meta_path.read_text())
     if batch in meta.get("batches_completed", []):

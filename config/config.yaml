@@ -5,13 +5,13 @@ output:
   image_dir: images
 llm:
   topic_selector:
-    provider: hy3
-    model: hy3
+    provider: dashscope
+    model: qwen-plus
     temperature: 0.7
     max_tokens: 4096
   article_generator:
-    provider: hy3
-    model: hy3
+    provider: dashscope
+    model: qwen-plus
     temperature: 0.8
     max_tokens: 8192
 data_sources:
@@ -22,15 +22,6 @@ data_sources:
     leagues:
     - id: nba
       name: NBA
-  gzh_trending:
-    provider: wechat_public_account
-    script: skills/gzh-explosive-content-detector/scripts/fetch_gzh_trends.py
-    keyword_groups:
-    - NBA,篮球
-    - NBA,季后赛,总决赛,常规赛
-    - NBA,詹姆斯,库里,杜兰特,东契奇,约基奇
-    - NBA,绝杀,逆转,加时,三双,纪录
-    - NBA,交易,签约,续约,自由球员,选秀
   hupu:
     provider: hupu_scraper
     script: hupu_scraper.py

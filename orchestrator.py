@@ -14,9 +14,9 @@ from difflib import SequenceMatcher
 from file_writer import FileWriter
 from image_service import ImageService
 from constants import (PROJECT_ROOT, OUTPUT_DIR,
-                       HY3_API_KEY, HY3_BASE_URL, HY3_MODEL_FLASH, HY3_MODEL_PRO,
-                       DASHSCOPE_KEY, UNSPLASH_KEY, FOOTBALL_DATA_KEY,
-                       DASHSCOPE_URL, FOOTBALL_DATA_BASE,
+                       DASHSCOPE_KEY, DASHSCOPE_URL, QWEN_MODEL,
+                       UNSPLASH_KEY, FOOTBALL_DATA_KEY,
+                       FOOTBALL_DATA_BASE,
                        WXPUSHER_APPTOKEN, WXPUSHER_UID,
                        WIKI_PLAYERS, WIKI_TEAMS, FOOTYRENDERS_PLAYERS,
                        BATCH_CONFIG, BATCH_TYPES, CONTENT_APP)
@@ -212,7 +212,7 @@ def get_performance_boost(performance_data):
 
 
 def _run_hupu_pipeline(date_str=None):
-    """兼容旧入口：返回虎扑NBA分区排名和球员得分榜。"""
+    """返回虎扑 NBA 分区排名和球员得分榜。"""
     from data_collector import fetch_rankings_data
     return fetch_rankings_data()
 
@@ -387,7 +387,7 @@ def _assign_columns_to_topics(topics, batch_mode):
         topic["_batch_time"] = batch_cfg["time"]
         topic["_reader_scenario"] = batch_cfg["reader_scenario"]
         topic["_overall_tone"] = batch_cfg["overall_tone"]
-        # Map column to legacy content_type for metadata compatibility
+        # 为文章元数据写入内容类型。
         topic["content_type"] = topic.get("content_type", "八卦趣事")
 
     column_names = [t.get("_column_name", "?") for t in topics[:len(slots)]]
@@ -452,7 +452,7 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
                            "_source_article_id": art.get("article_id"), "_finance": True})
         print(f"\n[2/5] 财经选题：{len(topics)} 条")
         return topics
-    print(f"\n[2/5] LLM 话题筛选 (hy3/Hunyuan, target={topic_count}篇)...")
+    print(f"\n[2/5] 千问话题筛选 (target={topic_count}篇)...")
     lines = []
     for league, matches in sorted(match_data.get("fixtures_by_league", {}).items()):
         lines.append(f"\n## {league}")
@@ -579,11 +579,11 @@ def select_topics(match_data, topic_history=None, preferred_types=None, season_w
         {"role": "system", "content": topic_selector_prompt},
         {"role": "user", "content": prompt}
     ]
-    # Retry on JSON parse failure: hy3/Hunyuan occasionally returns malformed JSON
+    # JSON 解析失败时重新请求，避免偶发的非 JSON 输出中断整批任务。
     topics = None
     for attempt in range(3):
-        response = call_llm(HY3_BASE_URL, HY3_API_KEY, HY3_MODEL_FLASH, messages, temperature=0.7, max_tokens=4096,
-                           fallback_url=DASHSCOPE_URL, fallback_key=DASHSCOPE_KEY, fallback_model="qwen-turbo")
+        response = call_llm(DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL, messages,
+                            temperature=0.7, max_tokens=4096)
         try:
             topics = safe_json_loads(response)
             break  # success
@@ -1117,9 +1117,8 @@ def rewrite_article(topic, match_context, index, temperature=0.5, retry_hint="",
         {"role": "user", "content": prompt},
     ]
 
-    response = call_llm(HY3_BASE_URL, HY3_API_KEY, HY3_MODEL_FLASH, messages,
-                        temperature=temperature, max_tokens=8192,
-                        fallback_url=DASHSCOPE_URL, fallback_key=DASHSCOPE_KEY, fallback_model="qwen-turbo")
+    response = call_llm(DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL, messages,
+                        temperature=temperature, max_tokens=8192)
     article = safe_json_loads(response)
 
     if article and isinstance(article, dict):
@@ -1632,7 +1631,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
 # Major Event Detection & Emergency Article Trigger
 # ============================================================
 
-def detect_major_events(match_data, gzh_articles=None):
+def detect_major_events(match_data):
     """检测值得立即跟进的 NBA 比赛与突发新闻。
 
     结构化数据可可靠判断高比分、胶着战和大胜；逆转、绝杀等只从新闻素材识别。
@@ -1686,28 +1685,6 @@ def detect_major_events(match_data, gzh_articles=None):
                     "urgency": 82,
                     "league": league,
                     "detail": f"{league}: {home} {hg}-{ag} {away}",
-                })
-
-    # 2. Scan GZH trends for breaking news
-    if gzh_articles:
-        breaking_keywords = ["重磅", "官宣", "下课", "突发", "绝杀", "逆转", "冲突", "驱逐",
-                            "交易", "解雇", "签约", "重伤", "退役", "告别", "三双", "纪录"]
-        for a in gzh_articles:
-            title = a.get("title", "")
-            summary = a.get("summary", "") or ""
-            text = title + summary
-            matched_kws = [kw for kw in breaking_keywords if kw in text]
-            if matched_kws:
-                reads = a.get("clicksCount", 0)
-                # Viral potential: high reads + breaking keywords
-                viral_score = min(95, 60 + len(matched_kws) * 5 + (reads // 10000) * 2)
-                events.append({
-                    "type": "突发新闻",
-                    "title_hint": title[:60],
-                    "urgency": min(95, viral_score),
-                    "source": "GZH trending",
-                    "detail": f"公众号爆款: {title[:60]} (阅读:{reads})",
-                    "gzh_article": a,
                 })
 
     # Deduplicate by title_hint
@@ -1777,8 +1754,8 @@ def generate_emergency_article(event, match_data, index, temperature=0.8):
         {"role": "system", "content": f"你是头条号NBA博主'球评人老六'，擅长突发事件快评。{style} 只输出JSON。"},
         {"role": "user", "content": prompt}
     ]
-    response = call_llm(HY3_BASE_URL, HY3_API_KEY, HY3_MODEL_FLASH, messages, temperature=temperature, max_tokens=4096,
-                        fallback_url=DASHSCOPE_URL, fallback_key=DASHSCOPE_KEY, fallback_model="qwen-turbo")
+    response = call_llm(DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL, messages,
+                        temperature=temperature, max_tokens=4096)
     article = safe_json_loads(response)
     print(f"   紧急球评标题: {article.get('title','?')}, 正文: {len(article.get('content',''))}字")
     return article
@@ -1858,7 +1835,7 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
     return successful_topics
 
 
-def _legacy_source_is_duplicate(title, used_sources):
+def _source_title_is_duplicate(title, used_sources):
     """复用旧 football-auto-publish 的素材标题判重规则。"""
     short_title = str(title or "")[:40]
     if not short_title:
@@ -1869,11 +1846,11 @@ def _legacy_source_is_duplicate(title, used_sources):
     )
 
 
-def _filter_news_by_legacy_dedup(articles, used_sources):
+def _filter_news_by_source_history(articles, used_sources):
     filtered = []
     for article in articles:
         title = str(article.get("title") or "").strip()
-        if _legacy_source_is_duplicate(title, used_sources):
+        if _source_title_is_duplicate(title, used_sources):
             print(f"   ⏭️ 按旧篮球规则判定为已用素材，跳过：{title[:40]}")
             continue
         filtered.append(article)
@@ -1890,7 +1867,7 @@ def _build_direct_news_topics(match_data, used_sources=None):
     seen = set()
     used_sources = set(used_sources or [])
     raw_articles = list(match_data.get("news_articles", [])) + list(match_data.get("transfer_news", []))
-    for article in _filter_news_by_legacy_dedup(raw_articles, used_sources):
+    for article in _filter_news_by_source_history(raw_articles, used_sources):
         title = str(article.get("title") or "").strip()
         url = str(article.get("url") or "").strip()
         identity = url or title
@@ -1977,9 +1954,8 @@ def generate_prediction_article(future_matches, date_str=None):
 
     for attempt in range(3):
         try:
-            response = call_llm(HY3_BASE_URL, HY3_API_KEY, HY3_MODEL_FLASH,
-                                messages, temperature=0.7, max_tokens=4096,
-                                fallback_url=DASHSCOPE_URL, fallback_key=DASHSCOPE_KEY, fallback_model="qwen-turbo")
+            response = call_llm(DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL,
+                                messages, temperature=0.7, max_tokens=4096)
             article = safe_json_loads(response)
             if not isinstance(article, dict) or not article.get("title"):
                 if attempt < 2:
@@ -2110,7 +2086,7 @@ def main():
         used_sources.update(cross_batch_covered.get("titles", set()))
         if match_data.get("data_source") == "worldnews":
             before_count = len(match_data.get("news_articles", []))
-            match_data["news_articles"] = _filter_news_by_legacy_dedup(
+            match_data["news_articles"] = _filter_news_by_source_history(
                 match_data.get("news_articles", []), used_sources
             )
             print(f"   🧹 财经素材去重: {before_count} → {len(match_data['news_articles'])} 篇")

@@ -18,14 +18,9 @@ if CONTENT_APP not in {"finance", "football"}:
 # --- Paths ---
 PROJECT_ROOT = Path(__file__).parent
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", PROJECT_ROOT / "output"))
-GZH_SCRIPT = str(PROJECT_ROOT / "skills" / "gzh-explosive-content-detector" / "scripts" / "fetch_gzh_trends.py")
 
 # --- API keys from env (GitHub Secrets) ---
-# LLM provider: hy3 / 腾讯云 TokenHub（tencentmaas，OpenAI 兼容协议）
-# 优先读 HY3_API_KEY，兼容旧变量 DEEPSEEK_API_KEY。
-# ⚠️ 切勿在此硬编码真实 key：本仓库为 public，写死会泄露并被他人盗刷额度。
-# 真实 key 通过 GitHub Actions Secrets (HY3_API_KEY) 注入 CI。
-_HY3_DEFAULT_KEY = ""
+# 运行时由工作流把对应业务的独立 Secret 映射到这些标准变量。
 
 
 def _resolve_api_key(default, *env_names):
@@ -42,14 +37,9 @@ def _resolve_api_key(default, *env_names):
     return default
 
 
-HY3_API_KEY = _resolve_api_key(_HY3_DEFAULT_KEY, "HY3_API_KEY", "DEEPSEEK_API_KEY")
-HY3_BASE_URL = "https://tokenhub.tencentmaas.com/v1/chat/completions"
-# 模型映射（可经环境变量覆盖）：TokenHub 仅 hy3 一个模型，flash/pro 均映射为 hy3
-HY3_MODEL_FLASH = os.environ.get("HY3_MODEL_FLASH", "hy3")   # 对应原 deepseek-v4-flash
-HY3_MODEL_PRO = os.environ.get("HY3_MODEL_PRO", "hy3")         # 对应原 deepseek-v4-pro
-
-# DASHSCOPE（通义千问）作为 hy3 配额耗尽时的兜底，同样需要跳过占位符
 DASHSCOPE_KEY = _resolve_api_key("", "DASHSCOPE_API_KEY")
+DASHSCOPE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+QWEN_MODEL = os.environ.get("QWEN_MODEL", "qwen-plus")
 UNSPLASH_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
 WORLD_NEWS_API_KEY = _resolve_api_key("", "WORLD_NEWS_API_KEY")
 WORLD_NEWS_URL = "https://api.worldnewsapi.com/search-news"
@@ -57,47 +47,16 @@ NBA_DATA_BASE = "https://www.zhibo8.com"
 NBA_NEWS_BASE = "https://news.zhibo8.com/nba/"
 NBA_STANDINGS_URL = "https://nba.hupu.com/standings"
 NBA_PLAYERS_URL = "https://nba.hupu.com/stats/players"
-# 兼容旧模块导入；NBA 版不再请求 football-data.org。
+# NBA 数据源配置。
 FOOTBALL_DATA_KEY = ""
-
-DASHSCOPE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
 FOOTBALL_DATA_BASE = NBA_DATA_BASE
 
 # --- WxPusher ---
 WXPUSHER_APPTOKEN = os.environ.get("WXPUSHER_APPTOKEN", "")
 WXPUSHER_UID = os.environ.get("WXPUSHER_UID", "")
 
-# 兼容旧调用的单赛事配置。
+# NBA 赛事配置。
 COMPETITION_IDS = {"NBA": "nba"}
-
-# --- GZH (公众号) keyword groups for trending detection ---
-GZH_KEYWORD_GROUPS = [
-    "NBA,篮球", "NBA,季后赛,总决赛,常规赛",
-    "NBA,绝杀,逆转,加时,爆冷", "NBA,交易,签约,续约,自由球员",
-    "NBA,詹姆斯,库里,杜兰特,东契奇,约基奇",
-    "NBA,三双,得分,篮板,助攻,三分",
-]
-
-GZH_TRANSFER_KEYWORDS = [
-    "NBA交易,重磅交易,交易流言", "NBA签约,续约,自由球员,裁员",
-    "NBA选秀,新秀,乐透签", "NBA球队,主教练,下课",
-]
-
-GZH_NOISE_PATTERNS = [
-    "实况足球", "足球经理", "世界杯", "英超", "欧冠", "中超",
-    "乒乓球", "樊振东", "孙颖莎", "王楚钦", "马龙", "国乒",
-    "辽篮", "郭艾伦", "赵继伟", "CBA", "男篮国家队", "广东宏远", "华南虎",
-    "和平精英", "王者荣耀", "英雄联盟", "LPL",
-    # Non-sports
-    "纳斯达克", "IPO", "股票", "基金", "利率",
-    "GLM-", "AI模型", "大模型",
-    # Chinese football drama (not match/tournament analysis)
-    "董路", "宋凯",
-    # Geopolitics/news (not football)
-    "伊朗方面", "伊朗宣布",
-    # Marketing/PR analysis (not football content)
-    "品牌营销", "营销妙手", "营销格局",
-]
 
 # --- NBA Wikipedia entity mappings ---
 WIKI_PLAYERS = {
@@ -134,9 +93,9 @@ BATCH_TYPES = {
 # and interaction pattern. Six columns, zero overlap across all batches.
 #
 # DATA SOURCE HINT per column:
-#   "match_preferred" = try match data first, fall back to GZH
-#   "gzh_preferred"   = try GZH first, enrich with match context if available
-#   "gzh_only"         = always use GZH pool regardless of match availability
+#   "match_preferred" = 优先使用比赛数据
+#   "news_preferred"  = 优先使用新闻素材，并结合比赛数据
+#   "news"            = 使用新闻素材
 
 FOOTBALL_BATCH_CONFIG = {
     "morning": {
@@ -171,7 +130,7 @@ FOOTBALL_BATCH_CONFIG = {
                 "word_count": [400, 600],
                 "interaction_type": "side_taking_vote",
                 "interaction_guidance": "文末明确说'评论区站队——支持XX的扣1，反对的扣2，我先来：我站[1/2]，因为...'",
-                "data_source_hint": "gzh_preferred",
+                "data_source_hint": "news_preferred",
             },
         ],
     },
@@ -231,7 +190,7 @@ FOOTBALL_BATCH_CONFIG = {
                 "word_count": [400, 600],
                 "interaction_type": "prediction_poll",
                 "interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
-                "data_source_hint": "gzh_only",
+                "data_source_hint": "news",
             },
             {
                 "slot": 1,
@@ -245,7 +204,7 @@ FOOTBALL_BATCH_CONFIG = {
                 "word_count": [400, 600],
                 "interaction_type": "side_taking_vote",
                 "interaction_guidance": "文末站队：'同意我的扣1，觉得我在瞎说的扣2，评论区见——别光扣数字，带理由来辩。'",
-                "data_source_hint": "gzh_only",
+                "data_source_hint": "news",
             },
         ],
     },
@@ -253,7 +212,7 @@ FOOTBALL_BATCH_CONFIG = {
 
 # --- Evening Column Pool (晚间栏目池) ---
 # The evening batch dynamically picks 2 columns from this pool based on daily
-# GZH trending data. An LLM call scores each column against todayʼs hot topics
+# current news data. An LLM call scores each column against todayʼs hot topics
 # and selects the two with the richest source material.
 EVENING_COLUMN_POOL = [
     {
@@ -268,7 +227,7 @@ EVENING_COLUMN_POOL = [
         "word_count": [400, 600],
         "interaction_type": "prediction_poll",
         "interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
-        "data_source_hint": "gzh_only",
+        "data_source_hint": "news",
     },
     {
         "slot": -1,
@@ -282,7 +241,7 @@ EVENING_COLUMN_POOL = [
         "word_count": [400, 600],
         "interaction_type": "side_taking_vote",
         "interaction_guidance": "文末站队：'同意我的扣1，觉得我在瞎说的扣2，评论区见——别光扣数字，带理由来辩。'",
-        "data_source_hint": "gzh_only",
+        "data_source_hint": "news",
     },
     {
         "slot": -1,
@@ -296,7 +255,7 @@ EVENING_COLUMN_POOL = [
         "word_count": [400, 600],
         "interaction_type": "side_taking_vote",
         "interaction_guidance": "文末投票：你认为这次判罚正确吗？正确扣1，错误扣2。",
-        "data_source_hint": "gzh_only",
+        "data_source_hint": "news",
     },
     {
         "slot": -1,
@@ -310,7 +269,7 @@ EVENING_COLUMN_POOL = [
         "word_count": [400, 600],
         "interaction_type": "prediction_poll",
         "interaction_guidance": "文末预测：你觉得这笔交易能成吗？能扣1，不能扣2。",
-        "data_source_hint": "gzh_only",
+        "data_source_hint": "news",
     },
     {
         "slot": -1,
@@ -324,7 +283,7 @@ EVENING_COLUMN_POOL = [
         "word_count": [400, 600],
         "interaction_type": "share_your_story",
         "interaction_guidance": "文末邀请分享：'你在现场看过最难忘的一场比赛是什么？评论区说说，看看谁的回忆最绝。'",
-        "data_source_hint": "gzh_only",
+        "data_source_hint": "news",
     },
     # 交易密探：NBA交易、签约与自由球员动态
     {
@@ -343,7 +302,7 @@ EVENING_COLUMN_POOL = [
     },
 ]
 
-# Map new column names to legacy content types for metadata compatibility
+# 栏目到文章内容类型的映射。
 CONTENT_TYPE_TO_COLUMN = {
     "NBA早报": "热点球评",
     "话题擂台": "八卦趣事",

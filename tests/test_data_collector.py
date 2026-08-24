@@ -1,6 +1,6 @@
 """NBA数据采集与事实结构测试。"""
 
-from constants import COMPETITION_IDS, GZH_KEYWORD_GROUPS, GZH_NOISE_PATTERNS
+from constants import COMPETITION_IDS
 from data_collector import fetch_fallback_trends
 from media_scraper import SportsScraper
 from utils import load_prompt_template
@@ -8,11 +8,6 @@ from utils import load_prompt_template
 
 def test_only_nba_competition_configured():
     assert COMPETITION_IDS == {"NBA": "nba"}
-
-
-def test_keywords_target_nba_and_exclude_cba():
-    assert any("NBA" in group for group in GZH_KEYWORD_GROUPS)
-    assert "CBA" in GZH_NOISE_PATTERNS
 
 
 def test_homepage_parser_keeps_nba_only():

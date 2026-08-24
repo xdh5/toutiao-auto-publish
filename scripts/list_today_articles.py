@@ -6,8 +6,6 @@ from pathlib import Path
 today = sys.argv[1] if len(sys.argv) > 1 else ""
 content_app = (os.environ.get("CONTENT_APP") or "finance").strip().lower()
 meta_path = Path("output") / content_app / today / "metadata.json"
-if content_app == "finance" and not meta_path.exists():
-    meta_path = Path("output") / today / "metadata.json"
 if not meta_path.exists():
     sys.exit(0)
 

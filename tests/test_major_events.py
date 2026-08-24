@@ -47,12 +47,5 @@ def test_events_sorted_by_urgency():
     assert [e["urgency"] for e in events] == sorted((e["urgency"] for e in events), reverse=True)
 
 
-def test_breaking_nba_news():
-    articles = [{"title": "重磅官宣！某队完成交易", "summary": "球队正式宣布",
-                 "clicksCount": 50000}]
-    events = detect_major_events(match_data(), articles)
-    assert any(event["type"] == "突发新闻" for event in events)
-
-
 def test_empty_data():
     assert detect_major_events({}) == []
