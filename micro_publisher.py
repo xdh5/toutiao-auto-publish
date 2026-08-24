@@ -24,27 +24,10 @@ AUTH_FILE = Path(os.environ.get("TOUTIAO_AUTH_FILE", ROOT / "toutiao_auth.json")
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", ROOT / "output"))
 PUBLISH_URL = "https://mp.toutiao.com/profile_v4/weitoutiao/publish"
 BATCHES = {"morning", "noon", "evening"}
-BLOCKED_TERMS = (
-    "法轮功", "法轮大法", "大纪元", "新唐人", "明慧网", "反华", "辱华",
-    "台独", "港独", "藏独", "疆独", "falun gong", "falun dafa",
-    "epoch times", "new tang dynasty", "minghui", "anti-china", "anti china",
-)
-
-
-def _security_passed(result):
-    security = result.get("security") if isinstance(result, dict) else None
-    return (isinstance(security, dict)
-            and security.get("cult_or_extremist") is False
-            and security.get("anti_china_or_hostile") is False)
-
-
 def _validate_content(content, source_body):
     compact = re.sub(r"\s+", "", content or "")
     if not 220 <= len(compact) <= 350:
         raise ValueError(f"微头条长度异常: {len(compact)}字，应为220—350字")
-    lowered = compact.lower()
-    if any(term in lowered for term in BLOCKED_TERMS):
-        raise ValueError("微头条命中邪教或反华黑名单")
     if "```" in content or content.lstrip().startswith(("标题：", "标题:")):
         raise ValueError("微头条包含标题或代码块")
     hashtags = re.findall(r"#[^#\n]{2,20}#", content)
@@ -81,11 +64,8 @@ def generate_draft(date_str, batch):
 2. 正文连同话题共220—350个中文字符，分3—5个短段落，不另写标题，不写“微头条：”；结尾必须另起一行添加1—2个相关话题，格式为“#话题#”。
 3. 不得新增原文没有的数字，也不得改变原文事实、人物关系和不确定性。
 4. 开头要让人愿意继续看，表达自然，不低俗、不标题党。
-5. 内容安全只拦两类：邪教组织及其媒体宣传；反华、辱华、分裂中国或敌对攻击中国的叙事。其他普通生活和财富话题不得拒绝。
-6. security两个字段必须明确返回布尔值；只有任一风险命中时content才为空。
-
 只输出JSON：
-{{"security":{{"cult_or_extremist":false,"anti_china_or_hostile":false,"reason":"明确理由"}},"content":"完整微头条正文"}}
+{{"content":"完整微头条正文"}}
 
 原文标题：{topic}
 原文正文：
@@ -94,16 +74,13 @@ def generate_draft(date_str, batch):
     raw = call_llm(
         DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
         [
-            {"role": "system", "content": "你是严谨的今日头条短内容编辑。只输出JSON，只拦邪教宣传和反华敌对内容。"},
+            {"role": "system", "content": "你是严谨的今日头条短内容编辑，只输出JSON。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.35,
         max_tokens=1800,
     )
     result = safe_json_loads(raw)
-    if not _security_passed(result):
-        security = result.get("security") if isinstance(result, dict) else None
-        raise ValueError(f"内容安全未明确通过: {security}")
     content = str(result.get("content") or "").strip()
     _validate_content(content, source_body)
 

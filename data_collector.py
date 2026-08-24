@@ -38,9 +38,6 @@ def _collect_toutiao_ai_topic(date_str, batch_mode):
     if not auth_file.exists():
         raise RuntimeError("缺少头条登录状态，无法读取AI创作建议")
     publish_url = "https://mp.toutiao.com/profile_v4/graphic/publish"
-    blocked_terms = ("法轮功", "法轮大法", "大纪元", "新唐人", "明慧网", "反华", "辱华",
-                     "台独", "港独", "藏独", "疆独", "falun gong", "falun dafa",
-                     "epoch times", "new tang dynasty", "anti-china", "anti china")
     topic = ""
     with sync_playwright() as playwright:
         try:
@@ -56,17 +53,11 @@ def _collect_toutiao_ai_topic(date_str, batch_mode):
         if "/auth/" in page.url or "/login" in page.url:
             browser.close()
             raise RuntimeError("头条登录状态已过期")
-        for _ in range(3):
-            locator = page.locator(".recommend-list .topic .text").first
-            topic = (locator.inner_text(timeout=10000) or "").strip()
-            if topic and not any(term in topic.lower() for term in blocked_terms):
-                break
-            refresh = page.locator(".recommend-list .refresh-btn").first
-            refresh.click(force=True)
-            page.wait_for_timeout(2500)
+        locator = page.locator(".recommend-list .topic .text").first
+        topic = (locator.inner_text(timeout=10000) or "").strip()
         browser.close()
-    if not topic or any(term in topic.lower() for term in blocked_terms):
-        raise RuntimeError("头条第一条AI创作建议为空或命中黑名单")
+    if not topic:
+        raise RuntimeError("头条第一条AI创作建议为空")
     print(f"[1/5] 头条AI创作建议第一条：{topic}")
     article = {
         "article_id": f"toutiao-{date_str}-{batch_mode}-{topic}",
@@ -93,12 +84,6 @@ def _collect_finance_news(date_str, batch_mode):
                             params=params, timeout=30)
     response.raise_for_status()
     rows = response.json().get("news") or []
-    blocked_domains = ("epochtimes.com", "theepochtimes.com", "ntdtv.com", "ntd.com",
-                       "minghui.org", "faluninfo.net", "falundafa.org")
-    blocked_terms = ("法轮功", "法轮大法", "大纪元", "新唐人", "明慧网", "退党", "九评共产党",
-                     "邪教", "反华", "辱华", "台独", "港独", "藏独", "疆独",
-                     "falun gong", "falun dafa", "epoch times", "new tang dynasty", "minghui",
-                     "anti-china", "anti china")
     overseas_terms = ("china", "chinese", "ai", "semiconductor", "chip", "electric vehicle",
                       "automaker", "consumer", "retail", "manufacturing", "supply chain", "factory",
                       "apple", "tesla", "nvidia", "microsoft", "google", "amazon", "meta", "tiktok")
@@ -113,10 +98,6 @@ def _collect_finance_news(date_str, batch_mode):
         if not title or not text or not url:
             continue
         if category not in ("business", "technology"):
-            continue
-        if any(host == d or host.endswith("." + d) for d in blocked_domains):
-            continue
-        if any(term in combined for term in blocked_terms):
             continue
         if region == "overseas" and not any(term in combined for term in overseas_terms):
             continue

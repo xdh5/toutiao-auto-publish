@@ -932,14 +932,6 @@ def _find_source_article(topic, match_context):
     return None
 
 
-def _finance_security_passed(result):
-    security = result.get("security") if isinstance(result, dict) else None
-    if not isinstance(security, dict):
-        return False
-    return (security.get("cult_or_extremist") is False
-            and security.get("anti_china_or_hostile") is False)
-
-
 def _rewrite_finance_article(topic, source, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
@@ -956,24 +948,18 @@ def _rewrite_finance_article(topic, source, retry_hint=""):
     fact_constraint = ("允许用不指向任何真实个人的第一人称生活化叙事来承载观点；不得把故事包装成可核验的真实新闻，也不得编造具体收益、调查、统计数字、真实人物或引语。"
                        if is_suggestion else "数字、人物、机构、日期、引语和因果只能来自素材。")
     prompt = f"""{role_intro}
-内容禁区只有两类：一是邪教组织及其媒体的宣传；二是反华、辱华、分裂中国或敌对攻击中国的叙事。具体黑名单已由程序在AI前处理。
-返回security.cult_or_extremist和security.anti_china_or_hostile两个布尔值；命中对应内容为true，否则必须为false。
-不要因为普通政治、国际关系、股票、投资观点、政策、政府或争议话题而拒绝。{length_rule}
+{length_rule}
 {fact_constraint}{('上次失败：' + retry_hint) if retry_hint else ''}
-当两个风险字段均为false时，article必须返回完整对象，禁止返回null；只有任一风险字段为true时article才返回null。
-只输出JSON：{{"security":{{"cult_or_extremist":false,"anti_china_or_hostile":false,"reason":"明确判断理由"}},"article":{{"title":"","backup_title":"","content":"","summary":"","keywords":["2-5个英文搜图词"],"keywords_cn":[],"golden_lines":[],"interaction_type":"","interaction_bait":"","content_type":"{topic.get('content_type','国内商业')}"}}}}
+article必须返回完整对象，禁止返回null。
+只输出JSON：{{"article":{{"title":"","backup_title":"","content":"","summary":"","keywords":["2-5个英文搜图词"],"keywords_cn":[],"golden_lines":[],"interaction_type":"","interaction_bait":"","content_type":"{topic.get('content_type','国内商业')}"}}}}
 来源媒体：{fixture.get('source_name','')}
 来源链接：{fixture.get('source_url','')}
 原标题：{source_title}
 来源正文：{source_text[:9000]}"""
     first = safe_json_loads(call_llm(
         DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-        [{"role": "system", "content": "只拦邪教宣传与反华敌对叙事；其他题材不得拒绝。"},
+        [{"role": "system", "content": "你是严谨的内容编辑，只输出JSON。"},
          {"role": "user", "content": prompt}], temperature=0.1, max_tokens=5000))
-    if not _finance_security_passed(first):
-        security_debug = first.get("security") if isinstance(first, dict) else None
-        reason = ((security_debug or {}).get("reason") if isinstance(security_debug, dict) else "") or f"安全检查未明确通过: {security_debug}"
-        raise ValueError(reason)
     generated = first.get("article")
     if not isinstance(generated, dict):
         raise ValueError("千问未返回article")
@@ -1006,21 +992,14 @@ def _rewrite_finance_article(topic, source, retry_hint=""):
             if cutoff:
                 article["content"] = content[:cutoff].strip()
 
-    generated_text = f"{article.get('title', '')} {article.get('content', '')}".lower()
-    blocked_output_terms = ("法轮功", "法轮大法", "大纪元", "新唐人", "明慧网", "反华", "辱华",
-                            "台独", "港独", "藏独", "疆独", "falun gong", "falun dafa",
-                            "epoch times", "new tang dynasty", "minghui", "anti-china", "anti china")
-    if any(term in generated_text for term in blocked_output_terms):
-        raise ValueError("生成稿命中邪教或反华黑名单")
-
     fact_rule = ("这是观点文章，允许围绕话题进行常识性分析和价值判断；但不得虚构具体新闻、真实人物经历、调查结论、统计数字或引语。"
                  if is_suggestion else
                  "所有人物、机构、数字、日期、比例、引语和因果均须来自来源。")
     review_prompt = f"""你是独立发布审核员，只对照本次来源，不使用外部知识。
-内容安全只检查邪教组织及其媒体宣传，以及反华、辱华、分裂中国或敌对攻击中国的叙事；其他题材一律不得以敏感、政治或投资为由拒绝；同时检查所有人物、机构、数字、日期、比例、引语和因果均来自来源，标题不夸大。
+检查所有人物、机构、数字、日期、比例、引语和因果均来自来源，标题不夸大。
 事实规则：{fact_rule}
 只有全部明确通过才passed=true。只输出JSON：
-{{"passed":false,"security":{{"cult_or_extremist":false,"anti_china_or_hostile":false,"reason":"明确判断理由"}},"facts_ok":false,"source_ok":false,"title_ok":false,"issues":[]}}
+{{"passed":false,"facts_ok":false,"source_ok":false,"title_ok":false,"issues":[]}}
 来源媒体：{fixture.get('source_name','')}
 来源链接：{fixture.get('source_url','')}
 来源标题：{source_title}
@@ -1031,9 +1010,9 @@ def _rewrite_finance_article(topic, source, retry_hint=""):
     if not is_suggestion:
         audit = safe_json_loads(call_llm(
             DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
-            [{"role": "system", "content": "只拦邪教和反华敌对内容；其余仅核对稿件是否忠实于来源。"},
+            [{"role": "system", "content": "仅核对稿件是否忠实于来源，只输出JSON。"},
              {"role": "user", "content": review_prompt}], temperature=0.0, max_tokens=2200))
-        if (audit.get("passed") is not True or not _finance_security_passed(audit)
+        if (audit.get("passed") is not True
                 or not all(audit.get(k) is True for k in ("facts_ok", "source_ok", "title_ok"))):
             raise ValueError("独立复核未通过：" + "; ".join(str(x) for x in audit.get("issues", [])))
     article.setdefault("keywords", ["middle aged life", "working for money", "personal growth"] if is_suggestion else ["business", "technology"])

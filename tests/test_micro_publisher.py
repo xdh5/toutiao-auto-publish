@@ -39,14 +39,7 @@ def test_generate_noon_micro_uses_news_article(tmp_path, monkeypatch):
             "file": "article.md",
         }],
     )
-    result = {
-        "security": {
-            "cult_or_extremist": False,
-            "anti_china_or_hostile": False,
-            "reason": "未命中",
-        },
-        "content": content,
-    }
+    result = {"content": content}
     monkeypatch.setattr(
         micro_publisher,
         "call_llm",
@@ -58,20 +51,3 @@ def test_generate_noon_micro_uses_news_article(tmp_path, monkeypatch):
     assert draft["content_type"] == "新闻微头条"
     assert draft["topic"] == "一家制造企业公布新计划"
     assert (tmp_path / "2026-08-24" / "micro-noon.json").exists()
-
-
-def test_generate_rejects_unclear_security(tmp_path, monkeypatch):
-    monkeypatch.setattr(micro_publisher, "OUTPUT_DIR", tmp_path)
-    monkeypatch.setattr(
-        micro_publisher,
-        "load_articles",
-        lambda *args, **kwargs: [{"title": "生活话题", "body": _valid_content(), "file": "a.md"}],
-    )
-    monkeypatch.setattr(
-        micro_publisher,
-        "call_llm",
-        lambda *args, **kwargs: json.dumps({"security": {}, "content": _valid_content()}),
-    )
-
-    with pytest.raises(ValueError, match="内容安全未明确通过"):
-        micro_publisher.generate_draft("2026-08-24", "morning")
