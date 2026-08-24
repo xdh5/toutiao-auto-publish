@@ -71,6 +71,9 @@ jobs:
 
       - name: 解码头条号登录状态
         run: |
+          if [ "${{ inputs.app }}" = "football" ] && [ -z "$TOUTIAO_AUTH_GZ" ]; then
+            TOUTIAO_AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"
+          fi
           if [ -n "$TOUTIAO_AUTH_GZ" ]; then
             echo "$TOUTIAO_AUTH_GZ" | base64 -d | gunzip > toutiao_auth.json
             echo "头条号登录状态已恢复"
@@ -79,6 +82,8 @@ jobs:
           fi
         env:
           TOUTIAO_AUTH_GZ: ${{ inputs.app == 'football' && secrets.FOOTBALL_TOUTIAO_AUTH_GZ || secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
+          FOOTBALL_AUTH_GZ_1: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_1 }}
+          FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
 
       - name: 幂等保护 — 跳过已完成的批次
         id: dedup

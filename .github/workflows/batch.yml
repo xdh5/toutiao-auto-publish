@@ -101,6 +101,8 @@ jobs:
         env:
           FINANCE_AUTH_GZ: ${{ secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
           FOOTBALL_AUTH_GZ: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ }}
+          FOOTBALL_AUTH_GZ_1: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_1 }}
+          FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
         run: |
           mkdir -p /tmp/auth
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -112,7 +114,15 @@ jobs:
               *) APP="finance" ;;
             esac
           fi
-          if [ "$APP" = "football" ]; then AUTH_GZ="$FOOTBALL_AUTH_GZ"; else AUTH_GZ="$FINANCE_AUTH_GZ"; fi
+          if [ "$APP" = "football" ]; then
+            if [ -n "$FOOTBALL_AUTH_GZ" ]; then
+              AUTH_GZ="$FOOTBALL_AUTH_GZ"
+            else
+              AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"
+            fi
+          else
+            AUTH_GZ="$FINANCE_AUTH_GZ"
+          fi
           if [ -z "$AUTH_GZ" ]; then echo "❌ 缺少 ${APP} 头条登录状态 Secret"; exit 1; fi
           echo "$AUTH_GZ" | base64 -d | python3 -c "import sys,gzip; sys.stdout.buffer.write(gzip.decompress(sys.stdin.buffer.read()))" > /tmp/auth/toutiao_auth.json
 
