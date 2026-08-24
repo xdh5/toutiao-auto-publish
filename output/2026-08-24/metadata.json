@@ -1,0 +1,76 @@
+{
+  "date": "2026-08-24",
+  "generated_at": "2026-08-24T00:38:49.903618",
+  "total_articles": 1,
+  "articles": [
+    {
+      "index": 1,
+      "title": "中年醒悟：钱重要，但有些东西一塌糊涂就真来不及了",
+      "path": "/home/runner/work/_temp/output/2026-08-24/article-1-中年醒悟钱重要但-2198b3.md",
+      "slug": "中年醒悟钱重要但-2198b3",
+      "tags": [
+        "middle age life",
+        "family care",
+        "side hustle",
+        "health awareness",
+        "everyday resilience"
+      ],
+      "keywords": [
+        "middle age life",
+        "family care",
+        "side hustle",
+        "health awareness",
+        "everyday resilience"
+      ],
+      "images": [
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-001.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-002.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-003.jpg"
+      ],
+      "sources_used": [
+        "头条创作助手"
+      ],
+      "source_post": "",
+      "originality_note": "",
+      "content_type": "AI话题",
+      "column_id": "ai-topic-morning",
+      "column_name": "AI创作话题",
+      "batch_name": "晨读"
+    }
+  ],
+  "topics": [
+    {
+      "title": "人到中年，除了钱什么最重要了",
+      "angle": "严格依据原文",
+      "keywords": [
+        "middle aged life",
+        "working for money",
+        "personal growth"
+      ],
+      "keywords_cn": [],
+      "content_type": "AI话题",
+      "score": 100,
+      "_source_article_id": "toutiao-2026-08-24-morning-人到中年，除了钱什么最重要了",
+      "_finance": true,
+      "_column_id": "ai-topic-morning",
+      "_column_name": "AI创作话题",
+      "_column_icon": "📰",
+      "_writing_style": "中年励志生活分享体",
+      "_style_detail": "以中年人第一人称分享生活经历，把挣钱、攒钱、普通人翻身和财富自由融入具体场景，朴实真诚，不承诺暴富",
+      "_word_count_range": [
+        450,
+        550
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "头条创作助手推荐话题",
+      "_topic_guidance": "使用AI创作建议第一条话题",
+      "_data_source_hint": "news",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "早间商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "data_sources": {}
+}
