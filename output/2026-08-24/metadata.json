@@ -1,7 +1,7 @@
 {
   "date": "2026-08-24",
-  "generated_at": "2026-08-24T02:11:10.416385",
-  "total_articles": 4,
+  "generated_at": "2026-08-24T05:23:37.683375",
+  "total_articles": 5,
   "articles": [
     {
       "index": 1,
@@ -138,39 +138,73 @@
       "column_id": "ai-topic-morning",
       "column_name": "AI创作话题",
       "batch_name": "晨读"
+    },
+    {
+      "index": 1,
+      "title": "Gold Holds Gain as Dip-Buying Counters Inflation Fears From War",
+      "path": "/home/runner/work/_temp/output/2026-08-24/article-1-GoldHold-582632.md",
+      "slug": "GoldHold-582632",
+      "tags": [
+        "gold price",
+        "spot gold",
+        "silver price",
+        "Bloomberg Dollar Spot Index",
+        "commodity trading"
+      ],
+      "keywords": [
+        "gold price",
+        "spot gold",
+        "silver price",
+        "Bloomberg Dollar Spot Index",
+        "commodity trading"
+      ],
+      "images": [
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-001.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-002.jpg",
+        "/home/runner/work/_temp/output/2026-08-24/images/article-1-img-003.jpg"
+      ],
+      "sources_used": [
+        "financialpost.com"
+      ],
+      "source_post": "",
+      "originality_note": "",
+      "content_type": "海外商业",
+      "column_id": "finance-news-noon",
+      "column_name": "财经科技新闻",
+      "batch_name": "午间"
     }
   ],
   "topics": [
     {
-      "title": "一个人有了钱就没有烦恼了吗",
+      "title": "Gold Holds Gain as Dip-Buying Counters Inflation Fears From War",
       "angle": "严格依据原文",
       "keywords": [
-        "middle aged life",
-        "working for money",
-        "personal growth"
+        "business",
+        "company",
+        "manufacturing"
       ],
       "keywords_cn": [],
-      "content_type": "AI话题",
+      "content_type": "海外商业",
       "score": 100,
-      "_source_article_id": "toutiao-2026-08-24-morning-一个人有了钱就没有烦恼了吗",
+      "_source_article_id": "453358616",
       "_finance": true,
-      "_column_id": "ai-topic-morning",
-      "_column_name": "AI创作话题",
-      "_column_icon": "📰",
-      "_writing_style": "中年励志生活分享体",
-      "_style_detail": "以中年人第一人称分享生活经历，把挣钱、攒钱、普通人翻身和财富自由融入具体场景，朴实真诚，不承诺暴富",
+      "_column_id": "finance-news-noon",
+      "_column_name": "财经科技新闻",
+      "_column_icon": "🌐",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
       "_word_count_range": [
-        450,
-        550
+        1,
+        500
       ],
       "_interaction_type": "",
       "_interaction_guidance": "",
-      "_topic_domain": "头条创作助手推荐话题",
-      "_topic_guidance": "使用AI创作建议第一条话题",
+      "_topic_domain": "与中国读者相关的海外财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
       "_data_source_hint": "news",
-      "_batch_name": "晨读",
-      "_batch_time": "08:00",
-      "_reader_scenario": "早间商业资讯",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午间海外商业资讯",
       "_overall_tone": "简洁、客观、信息密度高"
     }
   ],
