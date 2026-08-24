@@ -1386,34 +1386,7 @@ def save_articles_local(date_str, articles, images_map, topics, match_data, extr
                 if g_clean and len(g_clean) > 8 and g_clean in content:
                     # 加粗+引号包裹，让它更显眼
                     content = content.replace(g_clean, f"**「{g_clean}」**", 1)
-            # 如果有2+金句，文末加一个金句回顾框（类似"🎙️ 老六金句"）
-            valid_golden = [g for g in golden if len(g.strip().strip('"')) > 8]
-            if len(valid_golden) >= 2 and "老六金句" not in content:
-                golden_block = "\n\n---\n🎙️ **老六金句**\n"
-                for g in valid_golden[:3]:
-                    gd = g.strip().strip('"')
-                    golden_block += f"> *{gd}*\n\n"
-                content += golden_block
             art["content"] = content
-
-        # 3. 互动钩子注入：在文末追加 interaction_bait
-        bait = art.get("interaction_bait", "")
-        if bait and len(bait) > 5 and bait not in art.get("content", ""):
-            bait_clean = bait.strip().strip('"').strip('"')
-            # 根据 interaction_type 添加不同的前缀表情
-            i_type = art.get("interaction_type", "")
-            prefix_map = {
-                "站队式": "🗣️ 说说你的看法",
-                "投票式": "📊 来投个票",
-                "预测式": "🔮 你的预测是",
-                "共鸣式": "💬 有没有同感的",
-                "挑战式": "🤔 不服来辩",
-                "调侃式": "😏 你们说呢",
-                "": "💬 各位老铁",
-            }
-            prefix = prefix_map.get(i_type, "💬")
-            art["content"] = f"{art.get('content', '')}\n\n---\n**{prefix}：{bait_clean}**\n👇 评论区见分晓！"
-            print(f"   🎣 互动钩子: [{i_type}] {bait_clean[:40]}")
 
         # Save article
         art_data = {**art, "downloaded_images": downloaded,
