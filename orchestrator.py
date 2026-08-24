@@ -24,7 +24,8 @@ from utils import retry, call_llm, safe_json_loads, load_prompt_template
 from logger import log
 from data_collector import (collect_real_matches, collect_transfer_news, collect_future_matches,
                              search_images, search_wikipedia, search_footyrenders,
-                             extract_search_entities, get_topic_history)
+                             extract_search_entities, get_topic_history,
+                             get_previously_used_sources)
 
 
 def print_daily_summary(date_str, batch_mode):
@@ -263,6 +264,9 @@ def get_cross_batch_covered(date_str):
             title = a.get("title", "")
             if title:
                 covered["titles"].add(title[:30])
+            for source_title in a.get("sources_used", []):
+                if source_title:
+                    covered["titles"].add(source_title[:40])
             for kw in a.get("keywords", []):
                 covered["keywords"].add(kw.lower())
             for tag in a.get("tags", []):
@@ -1789,10 +1793,32 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
     """Pipeline A：对每个话题从直播吧/懂球帝源文章改写为老六风格。
 
     配图优先级：① 源文章战报图片 → ② Unsplash/Wikipedia 搜索。
+    ``count`` 是成功文章目标数；候选话题失败时继续尝试后续话题。
     """
-    for i, topic in enumerate(topics[:count]):
+    initial_article_count = len(articles_out)
+    successful_topics = []
+    for candidate_index, topic in enumerate(topics):
+        if len(articles_out) - initial_article_count >= count:
+            break
+
+        target_index = len(articles_out) - initial_article_count
+        output_index = len(articles_out)
+        # 回退候选仍属于当前目标栏位，必须继承同一个批次/栏目元数据。
+        slot_template = topics[min(target_index, len(topics) - 1)]
+        for key in (
+            "_column_id", "_column_name", "_column_icon", "_writing_style",
+            "_style_detail", "_word_count_range", "_interaction_type",
+            "_interaction_guidance", "_topic_domain", "_topic_guidance",
+            "_data_source_hint", "_batch_name", "_batch_time",
+            "_reader_scenario", "_overall_tone",
+        ):
+            if key in slot_template:
+                topic[key] = slot_template[key]
         ct = topic.get("content_type", "N/A")
-        print(f"\n--- 第{i+1}/{count}篇 [{ct}] ---")
+        print(
+            f"\n--- 目标第{len(articles_out) - initial_article_count + 1}/{count}篇 "
+            f"· 候选{candidate_index + 1}/{len(topics)} [{ct}] ---"
+        )
 
         # 优先用源文章的配图（比赛相关，不重复）
         source_imgs = []
@@ -1808,18 +1834,85 @@ def _generate_articles_from_topics(topics, count, match_data, images_map, stats,
         else:
             imgs = search_images(topic, count=5)
 
-        images_map[i] = imgs
         generation_retries = 0 if match_data.get("data_source") == "toutiao_ai" else 2
-        art, error = generate_article_with_retry(topic, match_data, i + 1,
+        art, error = generate_article_with_retry(topic, match_data, output_index + 1,
                                                   max_retries=generation_retries, date_str=date_str)
         stats["generated"] += 1
         if error:
             print(f"   ❌ 最终失败: {error}")
             stats["failed"] += 1
-            stats["issues"].append(f"第{i+1}篇({ct}): {error}")
+            stats["issues"].append(f"候选{candidate_index + 1}({ct}): {error}")
+            if candidate_index + 1 < len(topics):
+                print("   🔄 自动尝试下一个候选话题")
         else:
             stats["valid"] += 1
-            articles_out.append((i, art))
+            source_title = topic.get("title", "")[:40]
+            sources_used = list(art.get("sources_used", []))
+            if source_title and source_title not in sources_used:
+                sources_used.append(source_title)
+            art["sources_used"] = sources_used
+            images_map[output_index] = imgs
+            articles_out.append((output_index, art))
+            successful_topics.append(topic)
+
+    return successful_topics
+
+
+def _legacy_source_is_duplicate(title, used_sources):
+    """复用旧 football-auto-publish 的素材标题判重规则。"""
+    short_title = str(title or "")[:40]
+    if not short_title:
+        return True
+    return short_title in used_sources or any(
+        len(used) >= 10 and (used[:20] in short_title or short_title[:20] in used)
+        for used in used_sources
+    )
+
+
+def _filter_news_by_legacy_dedup(articles, used_sources):
+    filtered = []
+    for article in articles:
+        title = str(article.get("title") or "").strip()
+        if _legacy_source_is_duplicate(title, used_sources):
+            print(f"   ⏭️ 按旧篮球规则判定为已用素材，跳过：{title[:40]}")
+            continue
+        filtered.append(article)
+    return filtered
+
+
+def _build_direct_news_topics(match_data, used_sources=None):
+    """把已采集的篮球新闻直接变成绑定原始来源的候选话题。
+
+    单篇任务不再让 LLM 另造选题后反向匹配来源。优先选择已有正文的新闻，
+    其余新闻仍保留为回退候选，由生成阶段依次尝试。
+    """
+    candidates = []
+    seen = set()
+    used_sources = set(used_sources or [])
+    raw_articles = list(match_data.get("news_articles", [])) + list(match_data.get("transfer_news", []))
+    for article in _filter_news_by_legacy_dedup(raw_articles, used_sources):
+        title = str(article.get("title") or "").strip()
+        url = str(article.get("url") or "").strip()
+        identity = url or title
+        if not title or not identity or identity in seen:
+            continue
+        seen.add(identity)
+        article_text = str(article.get("article_text") or article.get("_content") or "").strip()
+        candidates.append((
+            len(article_text) >= 100,
+            {
+                "title": title,
+                "angle": "严格依据这篇原始新闻改写，不增加来源外事实",
+                "keywords": [],
+                "keywords_cn": [],
+                "content_type": article.get("_content_type_hint", "热点球评"),
+                "_source_article_id": article.get("article_id"),
+                "_source_url": url,
+            },
+        ))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return [topic for _, topic in candidates]
 
 
 # ============================================================
@@ -2012,20 +2105,34 @@ def main():
             send_wxpusher("NBA自媒体 ⚠️", f"{date_str} 发文任务中止：{result_msg}")
             return
 
-        # Topic selection via LLM (based on match data + column domain guidance)
-        topics = select_topics(match_data, topic_history=topic_history,
-                               preferred_types=target_types,
-                               season_weights=season_weights,
-                               cross_batch_covered=cross_batch_covered,
-                               season_label=season_label,
-                               topic_count=article_count,
-                               yesterday_keywords=yesterday_keywords)
+        # 篮球单篇任务直接绑定已采集原新闻，避免 LLM 改写选题标题后无法反向匹配来源。
+        used_sources = get_previously_used_sources(date_str)
+        used_sources.update(cross_batch_covered.get("titles", set()))
+        if match_data.get("data_source") == "worldnews":
+            before_count = len(match_data.get("news_articles", []))
+            match_data["news_articles"] = _filter_news_by_legacy_dedup(
+                match_data.get("news_articles", []), used_sources
+            )
+            print(f"   🧹 财经素材去重: {before_count} → {len(match_data['news_articles'])} 篇")
+
+        if CONTENT_APP == "football" and article_count == 1:
+            topics = _build_direct_news_topics(match_data, used_sources=used_sources)
+            print(f"   📰 直接使用原始新闻候选: {len(topics)} 篇（按素材完整度排序）")
+        else:
+            # 多篇及财经任务继续使用 LLM 做选题排序。
+            topics = select_topics(match_data, topic_history=topic_history,
+                                   preferred_types=target_types,
+                                   season_weights=season_weights,
+                                   cross_batch_covered=cross_batch_covered,
+                                   season_label=season_label,
+                                   topic_count=article_count,
+                                   yesterday_keywords=yesterday_keywords)
         extra_meta = {"type": "match_analysis"}
         _assign_columns_to_topics(topics, batch_mode)
 
         # Generate articles: find source article for each topic, rewrite to 老六 style
-        _generate_articles_from_topics(topics, article_count, match_data,
-                                       images_map, stats, articles, date_str=date_str)
+        topics = _generate_articles_from_topics(topics, article_count, match_data,
+                                                images_map, stats, articles, date_str=date_str)
 
         # ============================================================
         # Prediction Article — 晚间批次生成明日赛前预测
@@ -2101,8 +2208,7 @@ def main():
             # 保存空批次元数据 — 避免同批次其他 cron 触发点重复重试
             if not defer_completion:
                 save_batch_state(date_str, batch_mode if batch_mode != "auto" else "full", [])
-            send_wxpusher("NBA自媒体 ⚠️", f"{date_str} 发文任务中止：{result_msg}")
-            return
+            raise RuntimeError(result_msg)
 
         articles_sorted = [a for _, a in sorted(articles, key=lambda x: x[0])]
         result = save_articles_local(date_str, articles_sorted, images_map, topics, match_data,

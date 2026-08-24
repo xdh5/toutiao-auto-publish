@@ -3,11 +3,6 @@ name: 头条财经与篮球手动发布
 permissions:
   contents: write
 
-# ⚠️ 重要：日常精确调度方案
-#   - 主调度：cron-job.org（精度 <1 分钟），每天 08:00/12:00/17:30 CST 准时触发
-#   - 备份：batch.yml 原生 GitHub cron（延迟 5-10 小时常见，仅作兜底）
-#   - 本地：系统 systemd timer 直接运行 batch_pipeline.sh（最可靠，无需外部依赖）
-# 此 workflow 仅保留 workflow_dispatch 供手动触发和紧急补发
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +18,7 @@ on:
       batch:
         description: '批次选择'
         required: false
-        default: 'auto'
+        default: auto
         type: choice
         options:
           - auto
@@ -32,15 +27,143 @@ on:
           - evening
 
 jobs:
-  generate-and-publish:
-    name: 发布 ${{ matrix.app }}
+  prepare:
+    name: 1. 准备任务
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    outputs:
+      apps: ${{ steps.params.outputs.apps }}
+      today: ${{ steps.params.outputs.today }}
+      batch: ${{ steps.params.outputs.batch }}
+    steps:
+      - name: 确定业务、日期和批次
+        id: params
+        run: |
+          if [ "${{ inputs.app }}" = "both" ]; then
+            echo 'apps=["finance","football"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'apps=["${{ inputs.app }}"]' >> "$GITHUB_OUTPUT"
+          fi
+          TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          BATCH="${{ inputs.batch }}"
+          if [ "$BATCH" = "auto" ]; then
+            HOUR=$(TZ=Asia/Shanghai date +%H)
+            if [ "$HOUR" -lt 10 ]; then BATCH="morning"
+            elif [ "$HOUR" -lt 15 ]; then BATCH="noon"
+            else BATCH="evening"; fi
+          fi
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+          echo "batch=$BATCH" >> "$GITHUB_OUTPUT"
+          echo "准备完成：${{ inputs.app }} / $TODAY / $BATCH"
+
+  write:
+    name: 2. 写文章 · ${{ matrix.app }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        app: ${{ fromJSON(needs.prepare.outputs.apps) }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PYTHONUNBUFFERED: 1
+      CONTENT_APP: ${{ matrix.app }}
+      OUTPUT_DIR: output/${{ matrix.app }}
+      MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 缓存 Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: 安装写作依赖
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: 代码自检
+        run: python3 tests/test_no_dead_references.py
+
+      - name: 检查本批次是否已经完成
+        id: dedup
+        env:
+          TODAY: ${{ needs.prepare.outputs.today }}
+          BATCH: ${{ needs.prepare.outputs.batch }}
+        run: |
+          SKIP=$(python3 scripts/check_batch_completed.py)
+          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
+          if [ "$SKIP" = "true" ]; then
+            echo "本批次已经完成，不重复写作"
+          fi
+
+      - name: 抓取素材并写文章
+        env:
+          HY3_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
+          WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY || secrets.WORLD_NEWS_API_KEY }}
+          WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
+          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
+        run: |
+          mkdir -p "pipeline/${{ matrix.app }}"
+          if [ "${{ steps.dedup.outputs.skip }}" = "true" ]; then
+            echo "STATUS=skipped" > "pipeline/${{ matrix.app }}/status.env"
+            exit 0
+          fi
+          set +e
+          python orchestrator.py "${{ needs.prepare.outputs.today }}" \
+            --batch="${{ needs.prepare.outputs.batch }}" --count=1 --defer-completion
+          RC=$?
+          set -e
+          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
+          if [ "$RC" -ne 0 ] || [ ! -f "$META" ]; then
+            echo "STATUS=failed" > "pipeline/${{ matrix.app }}/status.env"
+            echo "生成失败：退出码=$RC，未产生有效 metadata"
+            exit 0
+          fi
+          TOTAL=$(python3 -c "import json; print(len(json.load(open('$META', encoding='utf-8')).get('articles', [])))")
+          if [ "$TOTAL" -lt 1 ]; then
+            echo "STATUS=failed" > "pipeline/${{ matrix.app }}/status.env"
+            echo "生成失败：metadata 中没有文章"
+          else
+            echo "STATUS=ready" > "pipeline/${{ matrix.app }}/status.env"
+            echo "写作完成：$TOTAL 篇"
+          fi
+
+      - name: 交接文章给发布作业
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
+          path: |
+            output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/
+            pipeline/${{ matrix.app }}/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: 3. 发布 · ${{ matrix.app }}
+    needs: [prepare, write]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
-        app: ${{ fromJSON(inputs.app == 'both' && '["finance","football"]' || format('["{0}"]', inputs.app)) }}
+        app: ${{ fromJSON(needs.prepare.outputs.apps) }}
     concurrency:
       group: toutiao-publish
       cancel-in-progress: false
@@ -50,173 +173,121 @@ jobs:
       CONTENT_APP: ${{ matrix.app }}
       OUTPUT_DIR: output/${{ matrix.app }}
       MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
-
     steps:
-      - uses: actions/checkout@v4
+      - name: 检出发布程序
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: 保留仓库中的历史 metadata
+        run: |
+          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
+          if [ -f "$META" ]; then cp "$META" "/tmp/old-${{ matrix.app }}.json"; fi
+
+      - name: 下载待发布文章
+        uses: actions/download-artifact@v4
+        with:
+          name: draft-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
+          path: .
+
+      - name: 检查写作结果
+        id: state
+        run: |
+          STATUS_FILE="pipeline/${{ matrix.app }}/status.env"
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "缺少写作状态文件"
+            exit 1
+          fi
+          source "$STATUS_FILE"
+          echo "state=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" = "failed" ]; then
+            echo "写文章阶段失败，请查看对应写文章作业日志"
+            exit 1
+          fi
+          if [ "$STATUS" = "skipped" ]; then
+            echo "本批次已经发布过，本次跳过"
+          fi
+
+      - name: 设置 Python
+        if: steps.state.outputs.state == 'ready'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
+          cache: pip
 
-      - name: 缓存 Playwright 浏览器
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
-
-      - name: 安装依赖
+      - name: 安装发布依赖
+        if: steps.state.outputs.state == 'ready'
         run: |
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: 静态分析 — 检查无未定义的函数引用
-        run: |
-          python3 tests/test_no_dead_references.py
-
-      - name: 解码头条号登录状态
-        run: |
-          if [ "${{ matrix.app }}" = "football" ] && [ -z "$TOUTIAO_AUTH_GZ" ]; then
-            TOUTIAO_AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"
-          fi
-          if [ -n "$TOUTIAO_AUTH_GZ" ]; then
-            echo "$TOUTIAO_AUTH_GZ" | base64 -d | gunzip > toutiao_auth.json
-            echo "头条号登录状态已恢复"
-          else
-            echo "⚠️ 未设置 TOUTIAO_AUTH_GZ，将跳过发布步骤"
-          fi
+      - name: 恢复头条登录状态
+        if: steps.state.outputs.state == 'ready'
         env:
-          TOUTIAO_AUTH_GZ: ${{ matrix.app == 'football' && secrets.FOOTBALL_TOUTIAO_AUTH_GZ || secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
+          FINANCE_AUTH_GZ: ${{ secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
+          FOOTBALL_AUTH_GZ: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ }}
           FOOTBALL_AUTH_GZ_1: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_1 }}
           FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
-
-      - name: 幂等保护 — 跳过已完成的批次
-        id: dedup
         run: |
-          TODAY=$(TZ='Asia/Shanghai' date +%Y-%m-%d)
-          BATCH="${{ inputs.batch || 'auto' }}"
-          echo "today=$TODAY" >> $GITHUB_OUTPUT
-          echo "batch=$BATCH" >> $GITHUB_OUTPUT
-
-          # BATCH_CONFIG uses morning/noon/evening; orchestrator saves 'auto' as 'full'
-          CHECK_BATCH="$BATCH"
-          if [ "$CHECK_BATCH" = "auto" ]; then
-            CHECK_BATCH="full"
+          if [ "${{ matrix.app }}" = "football" ]; then
+            if [ -n "$FOOTBALL_AUTH_GZ" ]; then
+              AUTH_GZ="$FOOTBALL_AUTH_GZ"
+            else
+              AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"
+            fi
+          else
+            AUTH_GZ="$FINANCE_AUTH_GZ"
           fi
-
-          SKIP=$(TODAY="$TODAY" BATCH="$CHECK_BATCH" python3 scripts/check_batch_completed.py 2>/dev/null)
-
-          if [ "$SKIP" = "true" ]; then
-            echo "⏭️  批次 ${CHECK_BATCH} 今日已完成，跳过"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          echo "   批次 ${CHECK_BATCH} 尚未完成，继续执行"
-          echo "skip=false" >> $GITHUB_OUTPUT
-
-      - name: 时区校验
-        if: steps.dedup.outputs.skip != 'true'
-        id: tzcheck
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "✅ 手动触发，跳过发文时段限制"
-            exit 0
-          fi
-          HOUR=$(TZ='Asia/Shanghai' date +%H)
-          BATCH="${{ inputs.batch || 'auto' }}"
-          echo "cst_hour=$HOUR" >> $GITHUB_OUTPUT
-          echo "batch=$BATCH" >> $GITHUB_OUTPUT
-
-          # 校验：批次必须在对应的北京时间范围内
-          # cron-job.org 时区设错（如设为 Asia/Shanghai 而非 UTC）会导致触发时间偏移
-          valid=true
-          case "$BATCH" in
-            morning)
-              if [ "$HOUR" -lt 6 ] || [ "$HOUR" -gt 10 ]; then
-                echo "❌ 时区错误！${BATCH} 批次期望北京时间 06:00-10:00，当前 ${HOUR}:00"
-                valid=false
-              fi ;;
-            noon)
-              if [ "$HOUR" -lt 10 ] || [ "$HOUR" -gt 15 ]; then
-                echo "❌ 时区错误！${BATCH} 批次期望北京时间 10:00-15:00，当前 ${HOUR}:00"
-                valid=false
-              fi ;;
-            evening)
-              if [ "$HOUR" -lt 15 ] || [ "$HOUR" -gt 22 ]; then
-                echo "❌ 时区错误！${BATCH} 批次期望北京时间 15:00-22:00，当前 ${HOUR}:00"
-                valid=false
-              fi ;;
-            auto)
-              # auto 模式：根据 CST 小时自动判断，校验是否在合理范围
-              if [ "$HOUR" -lt 6 ] || [ "$HOUR" -gt 22 ]; then
-                echo "❌ 时区错误！当前北京时间 ${HOUR}:00，不在发文时段(06:00-22:00)"
-                valid=false
-              fi ;;
-          esac
-
-          if [ "$valid" = false ]; then
-            echo ""
-            echo "🔧 修复方法："
-            echo "   1. 登录 cron-job.org → 右上角齿轮 → Timezone → 选择 (UTC) UTC"
-            echo "   2. 确认不是 Asia/Shanghai 或其他时区"
-            echo "   3. 如果使用 GitHub 原生 cron，确认 cron 表达式是 UTC 时间"
+          if [ -z "$AUTH_GZ" ]; then
+            echo "缺少 ${{ matrix.app }} 头条登录状态"
             exit 1
           fi
-          echo "✅ 时区校验通过：${BATCH} 批次，北京时间 ${HOUR}:00"
+          echo "$AUTH_GZ" | base64 -d | gunzip > toutiao_auth.json
 
-      - name: 生成本批次文章
-        id: generate
-        run: |
-          TODAY=$(TZ='Asia/Shanghai' date +%Y-%m-%d)
-          BATCH="${{ inputs.batch || 'auto' }}"
-          if [ "$BATCH" = "auto" ]; then
-            HOUR=$(TZ='Asia/Shanghai' date +%H)
-            if [ "$HOUR" -lt 10 ]; then BATCH="morning"
-            elif [ "$HOUR" -lt 15 ]; then BATCH="noon"
-            else BATCH="evening"; fi
-          fi
-          echo "today=$TODAY" >> $GITHUB_OUTPUT
-          echo "batch=$BATCH" >> $GITHUB_OUTPUT
-          python orchestrator.py "$TODAY" --batch="$BATCH" --count=1 --defer-completion
-        env:
-          HY3_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
-          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
-          WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY || secrets.WORLD_NEWS_API_KEY }}
-          WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
-          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
-
-      - name: 发布到头条号
-        if: success()
-        run: |
-          if [ -f toutiao_auth.json ]; then
-            TODAY="${{ steps.generate.outputs.today }}"
-            BATCH="${{ steps.generate.outputs.batch }}"
-            python publisher.py "$TODAY" --headless --batch="$BATCH"
-          else
-            echo "跳过发布：无头条号登录状态"
-          fi
+      - name: 发布长文章
+        if: steps.state.outputs.state == 'ready'
         env:
           TOUTIAO_AUTH_FILE: toutiao_auth.json
           WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
           WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
-
-      - name: 生成并发布对应微头条
-        if: success()
         run: |
-          TODAY="${{ steps.generate.outputs.today }}"
-          BATCH="${{ steps.generate.outputs.batch }}"
-          python micro_publisher.py "$TODAY" --batch="$BATCH"
+          python publisher.py "${{ needs.prepare.outputs.today }}" --headless \
+            --batch="${{ needs.prepare.outputs.batch }}"
+
+      - name: 发布对应微头条
+        if: steps.state.outputs.state == 'ready'
         env:
           DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
           TOUTIAO_AUTH_FILE: toutiao_auth.json
+        run: |
+          python micro_publisher.py "${{ needs.prepare.outputs.today }}" \
+            --batch="${{ needs.prepare.outputs.batch }}"
 
-      - name: 上传文章存档
+      - name: 合并并推送批次完成状态
+        if: steps.state.outputs.state == 'ready'
+        run: |
+          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
+          python3 scripts/merge_batch_metadata.py \
+            --old "/tmp/old-${{ matrix.app }}.json" --new "$META" --output "$META" \
+            --batch "${{ needs.prepare.outputs.batch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f "$META"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore: ${{ matrix.app }} ${{ needs.prepare.outputs.today }} ${{ needs.prepare.outputs.batch }} 完成"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((attempt * 2))
+          done
+          echo "metadata 推送失败"
+          exit 1
+
+      - name: 保存发布结果
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: articles-${{ github.run_id }}
-          path: output/
+          name: result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
+          path: output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/
+          if-no-files-found: warn
           retention-days: 7

@@ -9,10 +9,14 @@ def test_scheduled_workflow_queues_finance_then_football():
         encoding="utf-8"
     )
 
-    assert "github.event_name == 'schedule' || inputs.app == 'both'" in workflow
-    assert "'[\"finance\",\"football\"]'" in workflow
+    assert 'apps=["finance","football"]' in workflow
+    assert "name: 1. 准备任务" in workflow
+    assert "name: 2. 写文章 · ${{ matrix.app }}" in workflow
+    assert "name: 3. 发布 · ${{ matrix.app }}" in workflow
+    assert "needs: prepare" in workflow
+    assert "needs: [prepare, write]" in workflow
     assert "max-parallel: 1" in workflow
-    assert 'APP="${{ matrix.app }}"' in workflow
+    assert "group: toutiao-publish" in workflow
 
 
 def test_manual_workflows_offer_both():
@@ -24,3 +28,13 @@ def test_manual_workflows_offer_both():
         assert "default: both" in workflow
         assert "- both" in workflow
         assert "max-parallel: 1" in workflow
+
+
+def test_both_workflows_persist_metadata_after_successful_publish():
+    for name in ("batch.yml", "daily.yml"):
+        workflow = (ROOT / ".github" / "workflows" / name).read_text(
+            encoding="utf-8"
+        )
+
+        assert "scripts/merge_batch_metadata.py" in workflow
+        assert "git push origin HEAD:main" in workflow

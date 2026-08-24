@@ -3,37 +3,15 @@ name: 头条财经与篮球早午晚发布
 permissions:
   contents: write
 
-# 纯 GitHub Actions 调度（无外部依赖）：
-#   每个批次按 finance → football 顺序发布，两个业务共用发布锁
-#   每个批次 3 个 cron，从目标时间开始每隔 ~10-20 分钟触发一次
-#   第一批成功执行后，后续通过幂等保护自动跳过
-#   += 晨读增加额外预触发窗口 (UTC 23:55 = CST 07:55)，与 00:xx 不同时间窗，
-#      规避 GH cron 某时段集体延迟导致所有触发点同时错过的问题。
-#
-#   晨读 (目标 08:00 CST, UTC 00:00):
-#     07:55 (预触发, UTC 23:55) / 08:07 / 08:17 / 08:37 CST
-#   午间 (目标 12:00 CST, UTC 04:00):
-#     12:07 / 12:17 / 12:37 CST
-#   晚间 (目标 17:30 CST, UTC 09:30):
-#     17:17 (预触发, UTC 09:17) / 17:37 / 17:47 / 18:07 CST
-#
-#   批次检测: schedule 事件从 github.event.schedule 解析 cron 表达式的 UTC hour
-#   (0/23→morning, 4→noon, 9/10→evening)，不依赖当前时间，彻底解决 cron 延迟导致的批次误判。
-#   workflow_dispatch 时直接使用 inputs.batch 参数。
 on:
   schedule:
-    # --- 晨读预触发 (UTC 23:55 = CST 07:55，独立时间窗降低集体延迟风险) ---
     - cron: '55 23 * * *'
-    # --- 晨读 (UTC 0 = CST 8) ---
     - cron: '7 0 * * *'
     - cron: '17 0 * * *'
     - cron: '37 0 * * *'
-    # --- 午间 (UTC 4 = CST 12) ---
     - cron: '7 4 * * *'
     - cron: '17 4 * * *'
     - cron: '37 4 * * *'
-    # --- 晚间 (UTC 9 = CST 17) ---
-    # 预触发 (UTC 09:17 = CST 17:17，低于目标时间延迟风险)
     - cron: '17 9 * * *'
     - cron: '37 9 * * *'
     - cron: '47 9 * * *'
@@ -50,7 +28,7 @@ on:
           - finance
           - football
       batch:
-        description: '批次 (morning/noon/evening，留空自动判断)'
+        description: '批次（留空则自动判断）'
         required: false
         type: choice
         options:
@@ -58,421 +36,283 @@ on:
           - noon
           - evening
       date:
-        description: '日期 (YYYY-MM-DD，默认今天北京时间)'
+        description: '日期（YYYY-MM-DD，默认北京时间今天）'
         required: false
-        type: string
         default: ''
+        type: string
 
 jobs:
-  publish:
-    name: 发布 ${{ matrix.app }}
+  prepare:
+    name: 1. 准备任务
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    outputs:
+      apps: ${{ steps.params.outputs.apps }}
+      today: ${{ steps.params.outputs.today }}
+      batch: ${{ steps.params.outputs.batch }}
+    steps:
+      - name: 确定业务、日期和批次
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.app }}" = "both" ]; then
+            echo 'apps=["finance","football"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'apps=["${{ inputs.app }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -n "${{ inputs.date }}" ]; then
+            TODAY="${{ inputs.date }}"
+          else
+            TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          fi
+
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            SCHEDULE_HOUR=$(echo "${{ github.event.schedule }}" | awk '{print $2}')
+            case "$SCHEDULE_HOUR" in
+              0|23) BATCH="morning" ;;
+              4) BATCH="noon" ;;
+              9|10) BATCH="evening" ;;
+              *) echo "无法识别定时批次"; exit 1 ;;
+            esac
+          elif [ -n "${{ inputs.batch }}" ]; then
+            BATCH="${{ inputs.batch }}"
+          else
+            HOUR=$(TZ=Asia/Shanghai date +%H)
+            if [ "$HOUR" -lt 10 ]; then BATCH="morning"
+            elif [ "$HOUR" -lt 15 ]; then BATCH="noon"
+            else BATCH="evening"; fi
+          fi
+
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+          echo "batch=$BATCH" >> "$GITHUB_OUTPUT"
+          echo "准备完成：$TODAY / $BATCH / finance,football"
+
+  write:
+    name: 2. 写文章 · ${{ matrix.app }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
-      max-parallel: 1
+      max-parallel: 2
       matrix:
-        app: ${{ fromJSON((github.event_name == 'schedule' || inputs.app == 'both') && '["finance","football"]' || format('["{0}"]', inputs.app)) }}
-    concurrency:
-      group: toutiao-publish
-      cancel-in-progress: false
-    permissions:
-      contents: write
-
+        app: ${{ fromJSON(needs.prepare.outputs.apps) }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PYTHONUNBUFFERED: 1
+      CONTENT_APP: ${{ matrix.app }}
+      OUTPUT_DIR: output/${{ matrix.app }}
+      MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
     steps:
-      - name: 检出代码
+      - name: 检出代码和历史 metadata
         uses: actions/checkout@v4
-
-      - name: 配置 Git 推送凭据
-        run: |
-          # 显式把 GITHUB_TOKEN 注入 remote，确保 git push 走令牌鉴权
-          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: 设置 Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.12'
+          cache: pip
 
-      - name: 安装依赖
+      - name: 安装写作依赖
         run: |
           pip install -r requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
+          playwright install chromium --with-deps
 
-      - name: 静态分析 — 检查无未定义的函数引用
+      - name: 代码自检
+        run: python3 tests/test_no_dead_references.py
+
+      - name: 检查远端批次幂等状态
+        id: dedup
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 tests/test_no_dead_references.py
+          META_API="repos/${{ github.repository }}/contents/output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json?ref=main"
+          COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
+          if echo "$COMPLETED" | grep -q "${{ needs.prepare.outputs.batch }}"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "本批次已完成，不重复生成"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: 写入头条号登录状态
+      - name: 抓取素材并写文章
+        env:
+          HY3_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
+          WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY || secrets.WORLD_NEWS_API_KEY }}
+          WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
+          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
+        run: |
+          mkdir -p "pipeline/${{ matrix.app }}"
+          if [ "${{ steps.dedup.outputs.skip }}" = "true" ]; then
+            echo "STATUS=skipped" > "pipeline/${{ matrix.app }}/status.env"
+            exit 0
+          fi
+          set +e
+          python orchestrator.py "${{ needs.prepare.outputs.today }}" \
+            --batch="${{ needs.prepare.outputs.batch }}" --count=1 --defer-completion
+          RC=$?
+          set -e
+          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
+          if [ "$RC" -ne 0 ] || [ ! -f "$META" ]; then
+            echo "STATUS=failed" > "pipeline/${{ matrix.app }}/status.env"
+            echo "生成失败：退出码=$RC，未产生有效 metadata"
+            exit 0
+          fi
+          TOTAL=$(python3 -c "import json; print(len(json.load(open('$META', encoding='utf-8')).get('articles', [])))")
+          if [ "$TOTAL" -lt 1 ]; then
+            echo "STATUS=failed" > "pipeline/${{ matrix.app }}/status.env"
+          else
+            echo "STATUS=ready" > "pipeline/${{ matrix.app }}/status.env"
+            echo "写作完成：$TOTAL 篇"
+          fi
+
+      - name: 交接文章给发布作业
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
+          path: |
+            output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/
+            pipeline/${{ matrix.app }}/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: 3. 发布 · ${{ matrix.app }}
+    needs: [prepare, write]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: ${{ fromJSON(needs.prepare.outputs.apps) }}
+    concurrency:
+      group: toutiao-publish
+      cancel-in-progress: false
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PYTHONUNBUFFERED: 1
+      CONTENT_APP: ${{ matrix.app }}
+      OUTPUT_DIR: output/${{ matrix.app }}
+      MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
+    steps:
+      - name: 检出发布程序和最新 metadata
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 保留仓库中的历史 metadata
+        run: |
+          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
+          if [ -f "$META" ]; then cp "$META" "/tmp/old-${{ matrix.app }}.json"; fi
+
+      - name: 下载待发布文章
+        uses: actions/download-artifact@v4
+        with:
+          name: draft-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
+          path: .
+
+      - name: 检查写作结果
+        id: state
+        run: |
+          STATUS_FILE="pipeline/${{ matrix.app }}/status.env"
+          if [ ! -f "$STATUS_FILE" ]; then echo "缺少写作状态"; exit 1; fi
+          source "$STATUS_FILE"
+          echo "state=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" = "failed" ]; then
+            echo "写文章阶段失败，请查看对应写文章作业日志"
+            exit 1
+          fi
+
+      - name: 发布前再次检查幂等状态
+        id: dedup
+        if: steps.state.outputs.state == 'ready'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          META_API="repos/${{ github.repository }}/contents/output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json?ref=main"
+          COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
+          if echo "$COMPLETED" | grep -q "${{ needs.prepare.outputs.batch }}"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "其他任务已完成本批次，停止重复发布"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 设置 Python
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 安装发布依赖
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: 恢复头条登录状态
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         env:
           FINANCE_AUTH_GZ: ${{ secrets.FINANCE_TOUTIAO_AUTH_GZ || secrets.TOUTIAO_AUTH_GZ }}
           FOOTBALL_AUTH_GZ: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ }}
           FOOTBALL_AUTH_GZ_1: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_1 }}
           FOOTBALL_AUTH_GZ_2: ${{ secrets.FOOTBALL_TOUTIAO_AUTH_GZ_2 }}
         run: |
-          mkdir -p /tmp/auth
-          APP="${{ matrix.app }}"
-          if [ "$APP" = "football" ]; then
-            if [ -n "$FOOTBALL_AUTH_GZ" ]; then
-              AUTH_GZ="$FOOTBALL_AUTH_GZ"
-            else
-              AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"
-            fi
+          if [ "${{ matrix.app }}" = "football" ]; then
+            if [ -n "$FOOTBALL_AUTH_GZ" ]; then AUTH_GZ="$FOOTBALL_AUTH_GZ"
+            else AUTH_GZ="${FOOTBALL_AUTH_GZ_1}${FOOTBALL_AUTH_GZ_2}"; fi
           else
             AUTH_GZ="$FINANCE_AUTH_GZ"
           fi
-          if [ -z "$AUTH_GZ" ]; then echo "❌ 缺少 ${APP} 头条登录状态 Secret"; exit 1; fi
-          echo "$AUTH_GZ" | base64 -d | python3 -c "import sys,gzip; sys.stdout.buffer.write(gzip.decompress(sys.stdin.buffer.read()))" > /tmp/auth/toutiao_auth.json
+          if [ -z "$AUTH_GZ" ]; then echo "缺少登录状态"; exit 1; fi
+          echo "$AUTH_GZ" | base64 -d | gunzip > toutiao_auth.json
 
-      - name: 确定批次和日期
-        id: params
+      - name: 发布长文章
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOUTIAO_AUTH_FILE: toutiao_auth.json
         run: |
-          # App
-          APP="${{ matrix.app }}"
-          echo "app=$APP" >> $GITHUB_OUTPUT
+          python publisher.py "${{ needs.prepare.outputs.today }}" --headless \
+            --batch="${{ needs.prepare.outputs.batch }}"
 
-          # Date
-          if [ -z "${{ inputs.date }}" ]; then
-            TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
-          else
-            TODAY="${{ inputs.date }}"
-          fi
-          echo "today=$TODAY" >> $GITHUB_OUTPUT
-
-          # Batch determination
-          # For schedule events: parse github.event.schedule to get the INTENDED
-          # batch, not the current execution time. This is critical because GitHub
-          # cron delays of 5+ hours will cause UTC-hour-window detection to misidentify
-          # the batch (e.g., morning cron delayed to UTC 4 → detected as noon).
-          # Falls back to UTC window detection if schedule parsing fails.
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            SCHEDULE_HOUR=$(echo "${{ github.event.schedule }}" | awk '{print $2}')
-            UTC_HOUR=$(date -u +%H)
-            CST_HOUR=$(TZ=Asia/Shanghai date +%H)
-            case "$SCHEDULE_HOUR" in
-              0|23) BATCH="morning" ;;
-              4)    BATCH="noon" ;;
-              9|10) BATCH="evening" ;;
-              *)
-                # Fallback: UTC hour window (±2h tolerance)
-                if [ "$UTC_HOUR" -ge 0 ] && [ "$UTC_HOUR" -le 2 ]; then BATCH="morning"
-                elif [ "$UTC_HOUR" -ge 22 ] && [ "$UTC_HOUR" -le 23 ]; then BATCH="morning"
-                elif [ "$UTC_HOUR" -ge 4 ] && [ "$UTC_HOUR" -le 6 ]; then BATCH="noon"
-                elif [ "$UTC_HOUR" -ge 9 ] && [ "$UTC_HOUR" -le 12 ]; then BATCH="evening"
-                else
-                  if [ "$CST_HOUR" -lt 10 ]; then BATCH="morning"
-                  elif [ "$CST_HOUR" -lt 15 ]; then BATCH="noon"
-                  else BATCH="evening"
-                  fi
-                fi
-                ;;
-            esac
-            echo "batch=$BATCH" >> $GITHUB_OUTPUT
-            echo "运行: $TODAY $BATCH 批次 (schedule trigger, UTC=$UTC_HOUR, CST=$CST_HOUR)"
-          elif [ -n "${{ inputs.batch }}" ]; then
-            BATCH="${{ inputs.batch }}"
-            echo "batch=$BATCH" >> $GITHUB_OUTPUT
-            echo "运行: $TODAY $BATCH 批次 (手动指定)"
-          else
-            HOUR=$(TZ=Asia/Shanghai date +%H)
-            if [ "$HOUR" -lt 10 ]; then
-              BATCH="morning"
-            elif [ "$HOUR" -lt 15 ]; then
-              BATCH="noon"
-            else
-              BATCH="evening"
-            fi
-            echo "batch=$BATCH" >> $GITHUB_OUTPUT
-            echo "运行: $TODAY $BATCH 批次 (auto-detected, CST=$HOUR:00)"
-          fi
-
-          # 时区校验 — 仅对 auto-detect（无手动指定批次）执行
-          if [ "${{ github.event_name }}" != "schedule" ] && [ -z "${{ inputs.batch }}" ]; then
-            HOUR=$(TZ=Asia/Shanghai date +%H)
-            valid=true
-            case "$BATCH" in
-              morning)
-                if [ "$HOUR" -lt 6 ] || [ "$HOUR" -gt 10 ]; then
-                  echo "❌ 时区错误！morning 批次期望北京时间 06:00-10:00，当前 ${HOUR}:00"
-                  valid=false
-                fi ;;
-              noon)
-                if [ "$HOUR" -lt 10 ] || [ "$HOUR" -gt 15 ]; then
-                  echo "❌ 时区错误！noon 批次期望北京时间 10:00-15:00，当前 ${HOUR}:00"
-                  valid=false
-                fi ;;
-              evening)
-                if [ "$HOUR" -lt 15 ] || [ "$HOUR" -gt 22 ]; then
-                  echo "❌ 时区错误！evening 批次期望北京时间 15:00-22:00，当前 ${HOUR}:00"
-                  valid=false
-                fi ;;
-            esac
-            if [ "$valid" = false ]; then
-              echo "🔧 如果是手动触发，请指定正确的 batch 参数"
-              exit 1
-            fi
-            echo "✅ 时区校验通过"
-          fi
-
-          # 幂等保护：通过 GitHub API 读取最新 metadata（比本地文件更可靠）
-          echo "   检查批次是否已执行..."
-          META_API="repos/${{ github.repository }}/contents/output/${APP}/${TODAY}/metadata.json?ref=main"
-          COMPLETED=$(gh api "$META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
-          if [ -z "$COMPLETED" ] && [ "$APP" = "finance" ]; then
-            LEGACY_META_API="repos/${{ github.repository }}/contents/output/${TODAY}/metadata.json?ref=main"
-            COMPLETED=$(gh api "$LEGACY_META_API" --jq '.content | @base64d | fromjson | .batches_completed | join(",")' 2>/dev/null) || true
-          fi
-          if echo "$COMPLETED" | grep -q "$BATCH"; then
-            echo "⏭️  批次 ${BATCH} 今日已完成，跳过"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          echo "skip=false" >> $GITHUB_OUTPUT
-          echo "   批次 ${BATCH} 尚未执行，继续"
-
-      - name: 时区诊断
-        if: always()
-        run: |
-          echo "╔══════════════════════════════════════╗"
-          echo "║  🕐 时区诊断                         ║"
-          echo "╠══════════════════════════════════════╣"
-          printf "║  %-20s %s ║\n" "UTC:" "$(date -u '+%Y-%m-%d %H:%M:%S')"
-          printf "║  %-20s %s ║\n" "CST (Asia/Shanghai):" "$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')"
-          printf "║  %-20s %s ║\n" "GitHub event:" "${{ github.event_name }}"
-          printf "║  %-20s %s ║\n" "Detected batch:" "${{ steps.params.outputs.batch }}"
-          printf "║  %-20s %s ║\n" "Target date:" "${{ steps.params.outputs.today }}"
-          echo "╚══════════════════════════════════════╝"
-
-      - name: 同步已有批次元数据（跨批次去重）
-        if: steps.params.outputs.skip != 'true'
-        run: |
-          # Copy previously pushed metadata from repo to orchestrator's data dir
-          # so get_cross_batch_covered() can see earlier batches' articles
-          if [ -d "output/${{ steps.params.outputs.app }}" ]; then
-            mkdir -p "${{ runner.temp }}/output/${{ steps.params.outputs.app }}"
-            cp -r "output/${{ steps.params.outputs.app }}"/* "${{ runner.temp }}/output/${{ steps.params.outputs.app }}/" 2>/dev/null || true
-            echo "✅ 已同步历史批次元数据到 OUTPUT_DIR"
-          elif [ "${{ steps.params.outputs.app }}" = "finance" ] && [ -f "output/${{ steps.params.outputs.today }}/metadata.json" ]; then
-            mkdir -p "${{ runner.temp }}/output/finance/${{ steps.params.outputs.today }}"
-            cp "output/${{ steps.params.outputs.today }}/metadata.json" "${{ runner.temp }}/output/finance/${{ steps.params.outputs.today }}/metadata.json"
-            echo "✅ 已从旧目录迁移当日财经元数据"
-          fi
-
-      - name: 生成本批次文章
-        id: generate
-        if: steps.params.outputs.skip != 'true'
+      - name: 发布对应微头条
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         env:
-          CONTENT_APP: ${{ steps.params.outputs.app }}
-          MAX_ARTICLE_IMAGES: ${{ steps.params.outputs.app == 'finance' && '1' || '3' }}
-          HY3_API_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
-          DASHSCOPE_API_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
-          WORLD_NEWS_API_KEY: ${{ secrets.FINANCE_WORLD_NEWS_API_KEY || secrets.WORLD_NEWS_API_KEY }}
-          TOUTIAO_AUTH_FILE: /tmp/auth/toutiao_auth.json
-          OUTPUT_DIR: ${{ runner.temp }}/output/${{ steps.params.outputs.app }}
-          WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
-          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
+          DASHSCOPE_API_KEY: ${{ matrix.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
+          TOUTIAO_AUTH_FILE: toutiao_auth.json
         run: |
-          python orchestrator.py "${{ steps.params.outputs.today }}" --batch="${{ steps.params.outputs.batch }}" --count=1 --defer-completion
+          python micro_publisher.py "${{ needs.prepare.outputs.today }}" \
+            --batch="${{ needs.prepare.outputs.batch }}"
 
-      - name: 回写生成结果（跨批次去重）
-        if: steps.params.outputs.skip != 'true' && !cancelled()
-        env:
-          TODAY: ${{ steps.params.outputs.today }}
-          BATCH: ${{ steps.params.outputs.batch }}
+      - name: 合并并推送批次完成状态
+        if: steps.state.outputs.state == 'ready' && steps.dedup.outputs.skip != 'true'
         run: |
-          # Push generated article metadata immediately so later batches
-          # (or delayed crons) can see today's already-published topics.
-          SRC="${{ runner.temp }}/output/${{ steps.params.outputs.app }}/${TODAY}/metadata.json"
-          if [ ! -f "$SRC" ]; then
-            echo "⚠️ metadata.json 不存在，跳过回写"
-            exit 0
-          fi
+          META="output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/metadata.json"
+          python3 scripts/merge_batch_metadata.py \
+            --old "/tmp/old-${{ matrix.app }}.json" --new "$META" --output "$META" \
+            --batch "${{ needs.prepare.outputs.batch }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          DST="output/${{ steps.params.outputs.app }}/${TODAY}/metadata.json"
-          mkdir -p "output/${{ steps.params.outputs.app }}/${TODAY}"
-          if [ "${{ steps.params.outputs.app }}" = "finance" ] && [ ! -f "$DST" ] && [ -f "output/${TODAY}/metadata.json" ]; then
-            cp "output/${TODAY}/metadata.json" "$DST"
-          fi
-          python3 -c "
-          import json
-          from pathlib import Path
-          src = Path('${SRC}')
-          dst = Path('${DST}')
-          new_meta = json.loads(src.read_text())
-          if dst.exists():
-              old_meta = json.loads(dst.read_text())
-              old_batches = set(old_meta.get('batches_completed', []))
-              new_batches = set(new_meta.get('batches_completed', []))
-              old_articles = {(a.get('title',''), a.get('content_type','')) for a in old_meta.get('articles', [])}
-              merged_articles = list(old_meta.get('articles', []))
-              for a in new_meta.get('articles', []):
-                  key = (a.get('title',''), a.get('content_type',''))
-                  if key not in old_articles:
-                      merged_articles.append(a)
-                      old_articles.add(key)
-              new_meta['articles'] = merged_articles
-              new_meta['total_articles'] = len(merged_articles)
-              new_meta['batches_completed'] = sorted(old_batches | new_batches)
-          dst.parent.mkdir(parents=True, exist_ok=True)
-          dst.write_text(json.dumps(new_meta, ensure_ascii=False, indent=2))
-          " || { echo "⚠️ 元数据合并失败，使用新数据"; cp "$SRC" "$DST"; }
-          git add -f "output/${{ steps.params.outputs.app }}/${TODAY}/metadata.json" || true
-          if git diff --cached --quiet; then
-            echo "📝 无变化，跳过提交"
-            exit 0
-          fi
-          git commit -m "chore: ${{ steps.params.outputs.app }} ${TODAY} ${BATCH} 生成完成元数据回写"
+          git add -f "$META"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore: ${{ matrix.app }} ${{ needs.prepare.outputs.today }} ${{ needs.prepare.outputs.batch }} 完成"
           for attempt in 1 2 3; do
-            if git push origin main; then
-              echo "✅ 生成结果已回写仓库"
-              break
-            fi
-            echo "⚠️  推送失败 (attempt $attempt/3)，rebase 后重试..."
             git pull --rebase origin main || true
-            /usr/bin/sleep $((attempt * 2))
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((attempt * 2))
           done
-
-      - name: 发布到头条号
-        id: publish_article
-        if: steps.params.outputs.skip != 'true'
-        env:
-          CONTENT_APP: ${{ steps.params.outputs.app }}
-          MAX_ARTICLE_IMAGES: ${{ steps.params.outputs.app == 'finance' && '1' || '3' }}
-          HY3_API_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_HY3_API_KEY || secrets.FINANCE_HY3_API_KEY || secrets.HY3_API_KEY }}
-          DASHSCOPE_API_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_UNSPLASH_ACCESS_KEY || secrets.FINANCE_UNSPLASH_ACCESS_KEY || secrets.UNSPLASH_ACCESS_KEY }}
-          TOUTIAO_AUTH_FILE: /tmp/auth/toutiao_auth.json
-          OUTPUT_DIR: ${{ runner.temp }}/output/${{ steps.params.outputs.app }}
-        run: |
-          python publisher.py "${{ steps.params.outputs.today }}" --headless --batch="${{ steps.params.outputs.batch }}"
-
-      - name: 生成并发布对应微头条
-        id: publish_micro
-        continue-on-error: true
-        if: steps.params.outputs.skip != 'true' && steps.publish_article.outcome == 'success'
-        env:
-          CONTENT_APP: ${{ steps.params.outputs.app }}
-          DASHSCOPE_API_KEY: ${{ steps.params.outputs.app == 'football' && secrets.FOOTBALL_DASHSCOPE_API_KEY || secrets.FINANCE_DASHSCOPE_API_KEY || secrets.DASHSCOPE_API_KEY }}
-          TOUTIAO_AUTH_FILE: /tmp/auth/toutiao_auth.json
-          OUTPUT_DIR: ${{ runner.temp }}/output/${{ steps.params.outputs.app }}
-        run: |
-          python micro_publisher.py "${{ steps.params.outputs.today }}" --batch="${{ steps.params.outputs.batch }}"
-
-      - name: 回写批次状态（幂等保护）
-        if: steps.params.outputs.skip != 'true' && steps.publish_article.outcome == 'success'
-        env:
-          TODAY: ${{ steps.params.outputs.today }}
-          BATCH: ${{ steps.params.outputs.batch }}
-        run: |
-          SRC="${{ runner.temp }}/output/${{ steps.params.outputs.app }}/${TODAY}/metadata.json"
-
-          if [ ! -f "$SRC" ]; then
-            echo "⚠️ metadata.json 不存在，跳过回写"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          DST="output/${{ steps.params.outputs.app }}/${TODAY}/metadata.json"
-          mkdir -p "output/${{ steps.params.outputs.app }}/${TODAY}"
-
-          # 合并 batches_completed，避免覆盖之前批次的状态
-          # BUGFIX: 从 dst（step 11 已合并后的元数据）读取，而非 src（仅当前批次）
-          # 否则会覆盖 step 11 合并好的跨批次文章列表
-          python3 -c "
-          import json, os
-          from pathlib import Path
-
-          src = Path('${SRC}')
-          dst = Path('${DST}')
-
-          if dst.exists():
-              # 使用 step 11 已合并的元数据（包含所有批次文章）
-              new_meta = json.loads(dst.read_text())
-              # 仅从 src 合并当前批次的完成状态
-              if src.exists():
-                  src_meta = json.loads(src.read_text())
-                  old_batches = set(new_meta.get('batches_completed', []))
-                  new_batches = set(src_meta.get('batches_completed', []))
-                  new_meta['batches_completed'] = sorted(old_batches | new_batches)
-          else:
-              # step 11 可能未执行（如 metadata.json 不存在），直接用 src
-              new_meta = json.loads(src.read_text())
-
-          current_batch = os.environ.get('BATCH', '')
-          completed = set(new_meta.get('batches_completed', []))
-          if current_batch:
-              completed.add(current_batch)
-          new_meta['batches_completed'] = sorted(completed)
-
-          dst.parent.mkdir(parents=True, exist_ok=True)
-          dst.write_text(json.dumps(new_meta, ensure_ascii=False, indent=2))
-          print(f'merged batches: {new_meta[\"batches_completed\"]}')
-          " || { echo "⚠️ 元数据合并失败，使用新数据"; cp "$SRC" "$DST"; }
-
-          git add -f "output/${{ steps.params.outputs.app }}/${TODAY}/metadata.json" || true
-
-          if git diff --cached --quiet; then
-            echo "📝 无变化，跳过提交"
-            exit 0
-          fi
-
-          git commit -m "chore: ${{ steps.params.outputs.app }} ${TODAY} ${BATCH} 批次完成"
-
-          # 重试推送：处理多批次并发写入时的 push 冲突
-          # 注意：git pull --rebase 必须带 || true，否则其失败会以 128 顶出整步
-          for attempt in 1 2 3; do
-            if git push origin main; then
-              echo "✅ 批次状态已回写仓库"
-              break
-            fi
-            echo "⚠️  推送失败 (attempt $attempt/3)，rebase 后重试..."
-            git pull --rebase origin main || true
-            /usr/bin/sleep $((attempt * 2))
-          done
-          echo "ℹ️ 若上方出现推送失败：文章已发布成功，仅仓库元数据回写未成功（下次运行可自动补齐）"
-
-      - name: 微头条失败则标记任务失败
-        if: steps.publish_micro.outcome == 'failure'
-        run: |
-          echo "❌ 长文章已发布并完成幂等标记，但对应微头条发布失败；请单独补发微头条。"
+          echo "metadata 推送失败"
           exit 1
-      - name: 上传产物
+
+      - name: 保存发布结果
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: articles-${{ steps.params.outputs.app }}-${{ steps.params.outputs.batch }}-${{ steps.params.outputs.today }}
-          path: ${{ runner.temp }}/output/${{ steps.params.outputs.app }}/${{ steps.params.outputs.today }}/
-
-      - name: 推送诊断（排错用，始终运行）
-        if: always()
-        run: |
-          echo "=== git remote -v ==="
-          git remote -v
-          echo "=== 最近一次提交 ==="
-          git log -1 --oneline 2>/dev/null || true
-          echo "=== 排错提示 ==="
-          echo "若文章已成功发布到头条号，但本运行仍因 git push 失败而告警："
-          echo "请检查仓库 Settings → Branches → main 是否开启了"
-          echo "'Require a pull request before merging'（该保护会禁止 GITHUB_TOKEN 直接推送）。"
-          echo "如开启，请关闭该保护，或为 GITHUB_TOKEN 添加绕过规则。"
-
-      - name: 失败通知
-        if: failure()
-        env:
-          WXPUSHER_APPTOKEN: ${{ secrets.WXPUSHER_APPTOKEN }}
-          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
-        run: |
-          python -c "
-          import requests
-          requests.post('https://wxpusher.zjiecode.com/api/send/message',
-            json={'appToken':'$WXPUSHER_APPTOKEN','content':'⚠️ ${{ steps.params.outputs.batch }} 批次发布失败\n日期: ${{ steps.params.outputs.today }}\n查看: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}','contentType':1,'uids':['$WXPUSHER_UID']})
-          "
+          name: result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}
+          path: output/${{ matrix.app }}/${{ needs.prepare.outputs.today }}/
+          if-no-files-found: warn
+          retention-days: 7
