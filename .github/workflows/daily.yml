@@ -72,6 +72,7 @@ jobs:
       CONTENT_APP: ${{ matrix.app }}
       OUTPUT_DIR: output/${{ matrix.app }}
       MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
+      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen3.8-max' }}
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -167,6 +168,7 @@ jobs:
       CONTENT_APP: ${{ matrix.app }}
       OUTPUT_DIR: output/${{ matrix.app }}
       MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
+      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen3.8-max' }}
     steps:
       - name: 检出发布程序
         uses: actions/checkout@v4

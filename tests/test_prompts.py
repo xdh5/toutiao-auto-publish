@@ -16,7 +16,7 @@ PROMPT_FILES = ("topic_selector.txt", "rewrite_article.txt")
 EXPECTED_PROMPT_HASHES = {
     "basketball/rewrite_article.txt": "049513a2c8064f7285f6e46cd79198b625937e90a6f3f6ddfab763726cca4bbb",
     "basketball/topic_selector.txt": "904a61930ada5b9eede2a9adec7bed6796e020b3df696b0e4bba51e886817474",
-    "finance/rewrite_article.txt": "ae2e3a1811f2e965346ac22ff2a9011a7287355c603c89d11c46c0a98ba477ad",
+    "finance/rewrite_article.txt": "b66f890b9652a523fe4fc1d75f50ff7efa6a5ee5032504d378a2afb9a2e6a4eb",
     "finance/topic_selector.txt": "0df23297bf665531b07c49e2a3c9662982fc718ff63f4f68774eb017ec98f9df",
 }
 
@@ -90,9 +90,18 @@ def test_finance_prompts_keep_finance_scope_and_source_facts():
     rewrite = load_prompt_template("rewrite_article.txt", "finance")
     assert "财经" in selector
     assert "来源文章" in rewrite
+    assert "{expansion_block}" in rewrite
+    assert "{retry_block}" in rewrite
+    assert "{source_char_count}" in rewrite
     assert all("财富研习岛" in prompt for prompt in (selector, rewrite))
     assert all("岛哥" in prompt for prompt in (selector, rewrite))
     assert all("球评人老六" not in prompt for prompt in (selector, rewrite))
+
+
+def test_finance_rewrite_uses_env_model():
+    source = inspect.getsource(orchestrator._rewrite_finance_article)
+    assert "QWEN_MODEL" in source
+    assert "qwen-plus" not in source
 
 
 def test_basketball_prompts_keep_basketball_scope_and_fidelity():

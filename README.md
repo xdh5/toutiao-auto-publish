@@ -18,7 +18,7 @@
 app/
 ├── finance/collector.py       # 财经专用采集器
 ├── finance/image_search.py    # 财经成文后专用选图
-├── finance/validator.py       # 财经专用字数与数字复核
+├── finance/validator.py       # 财经专用字数复核
 ├── basketball/collector.py    # 篮球专用采集器
 ├── basketball/image_search.py # 篮球原图与NBA实体选图
 ├── basketball/media_scraper.py
@@ -44,7 +44,7 @@ prompts/
 
 1. 早晚从 World News API 读取国内财经科技新闻；中午读取与中国读者相关的海外财经科技新闻。
 2. 调用各业务的选题 Prompt 筛选真实来源话题。
-3. 调用各业务的改写 Prompt，直接根据所选来源文章生成发布稿和微头条；与过去7天标题或正文开头重复时自动重写。篮球专用模块复核比分和球员数据，财经专用模块只复核字数与来源数字；连续不通过则换下一条素材。
+3. 调用各业务的改写 Prompt，直接根据所选来源文章生成发布稿和微头条；与过去7天标题或正文开头重复时自动重写。篮球专用模块复核比分和球员数据，财经专用模块只复核字数；连续不通过则换下一条素材。
 4. 篮球优先使用新闻原图，再按NBA球员或球队搜索；财经在最终文章生成成功后，根据公司、产品、行业和业务场景搜索并稳定轮换 Unsplash 候选。没有合适图片时允许无图发布。
 5. 使用 Playwright登录头条创作后台并发布长文章。
 6. 长文章成功后，生成同类型微头条并通过微头条发布页提交；作品管理页核验成功才算发布完成。
@@ -76,6 +76,7 @@ python -m app.micro_publisher 2026-08-24 --batch=morning
 | `BASKETBALL_TOUTIAO_AUTH_GZ` | 篮球头条号登录状态 |
 | `FINANCE_DASHSCOPE_API_KEY` | 财经通义千问 |
 | `BASKETBALL_DASHSCOPE_API_KEY` | 篮球通义千问 |
+| `QWEN_MODEL`（Repository Variable） | 通义千问模型，默认 `qwen3.8-max` |
 | `FINANCE_WORLD_NEWS_API_KEY` | 财经 World News |
 | `FINANCE_UNSPLASH_ACCESS_KEY` | 财经配图 |
 | `BASKETBALL_UNSPLASH_ACCESS_KEY` | 篮球配图 |
@@ -87,7 +88,7 @@ GitHub 的统一批次工作流支持单独选择 `app` 和 `batch`，也支持 
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot Token，用于发布结果通知 |
 | `TELEGRAM_CHAT_ID` | Telegram 接收会话 ID |
 
-本地 `.env` 与 `toutiao_auth.json` 已被 Git 忽略，不会提交到仓库。
+本地 `.env` 与 `toutiao_auth.json` 已被 Git 忽略，不会提交到仓库。可参考 `.env.example` 配置 `QWEN_MODEL`。
 
 ## 工作流
 

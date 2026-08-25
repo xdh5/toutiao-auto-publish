@@ -972,18 +972,33 @@ def _rewrite_finance_article(topic, source, index=1, retry_hint=""):
     source_text = (source.get("article_text") or "").strip()
     fixture = source.get("fixture") or {}
     source_title = fixture.get("article_title") or topic.get("title", "")
+    word_min, word_max = 450, 550
+    source_char_count = len(re.sub(r"\s+", "", source_text))
+    if source_char_count < word_min:
+        expansion_block = (
+            f"## 来源偏短（约{source_char_count}字），必须扩写补齐\n"
+            f"来源正文不足以直接凑满 {word_min}-{word_max} 字长文和 220-350 字微头条。"
+            "你必须在不新增事实、人物、机构、事件、数字、日期和比例的前提下，"
+            "通过背景解释、影响分析、行业含义、读者视角点评、跨界类比和互动钩子扩写。"
+            "只能展开来源已有信息，禁止编造内部消息、具体金额或来源未出现的数据。"
+        )
+    else:
+        expansion_block = ""
+    retry_block = f"⚠️ 上次改写失败，这次必须修正：{retry_hint}" if retry_hint else ""
     template = load_prompt_template("rewrite_article.txt")
     if not template:
         raise ValueError("缺少 finance/rewrite_article.txt")
     prompt = template.format(
-        word_min=450, word_max=550, content_type=topic.get("content_type", "国内商业"),
+        word_min=word_min, word_max=word_max, content_type=topic.get("content_type", "国内商业"),
         index=index, style="客观、清楚、自然的中文商业新闻",
         source_name=fixture.get("source_name", ""), source_url=fixture.get("source_url", ""),
         source_title=source_title, source_text=source_text[:9000],
-        retry_block=("上次失败：" + retry_hint) if retry_hint else "",
+        source_char_count=source_char_count,
+        expansion_block=expansion_block,
+        retry_block=retry_block,
     )
     first = safe_json_loads(call_llm(
-        DASHSCOPE_URL, DASHSCOPE_KEY, "qwen-plus",
+        DASHSCOPE_URL, DASHSCOPE_KEY, QWEN_MODEL,
         [{"role": "system", "content": "对照唯一来源直接改写，只输出JSON。"},
          {"role": "user", "content": prompt}], temperature=0.1, max_tokens=5000))
     generated = first.get("article") if isinstance(first, dict) and isinstance(first.get("article"), dict) else first
@@ -1127,7 +1142,7 @@ def _rewrite_with_retry(topic, match_context, index, source, max_retries, date_s
                         continue
                     return {}, f"跨日重复: {last_hint}"
 
-            # 财经稿不调用第二个模型，只用程序核对字数和数字。
+            # 财经稿不调用第二个模型，只用程序核对字数。
             if match_context.get("data_source") == "worldnews":
                 from .finance.validator import validate_article
                 finance_passed, finance_issues = validate_article(fixture, art)

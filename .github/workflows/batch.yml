@@ -103,6 +103,7 @@ jobs:
       CONTENT_APP: ${{ matrix.app }}
       OUTPUT_DIR: output/${{ matrix.app }}
       MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
+      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen3.8-max' }}
     steps:
       - name: 检出代码和历史 metadata
         uses: actions/checkout@v4
@@ -202,6 +203,7 @@ jobs:
       CONTENT_APP: ${{ matrix.app }}
       OUTPUT_DIR: output/${{ matrix.app }}
       MAX_ARTICLE_IMAGES: ${{ matrix.app == 'finance' && '1' || '3' }}
+      QWEN_MODEL: ${{ vars.QWEN_MODEL || 'qwen3.8-max' }}
     steps:
       - name: 检出发布程序和最新 metadata
         uses: actions/checkout@v4
