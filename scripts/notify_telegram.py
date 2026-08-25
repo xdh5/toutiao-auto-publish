@@ -10,22 +10,55 @@ import urllib.error
 import urllib.request
 
 
-BATCH_LABELS = {
-    "morning": "早",
-    "noon": "中",
-    "evening": "晚",
+APP_LABELS = {
+    "finance": "财经",
+    "basketball": "篮球",
 }
 
 
+def parse_apps(raw: str) -> list[str]:
+    try:
+        apps = json.loads(raw)
+    except json.JSONDecodeError:
+        apps = [item.strip() for item in raw.split(",") if item.strip()]
+    return [app for app in apps if app in APP_LABELS]
+
+
+def app_phrase(apps: list[str]) -> str:
+    return "/".join(APP_LABELS[app] for app in apps if app in APP_LABELS)
+
+
+def success_text(apps: list[str]) -> str:
+    return f"✅ {app_phrase(apps)}发布成功"
+
+
+def failure_text(apps: list[str], run_url: str, reason: str = "") -> str:
+    lines = [f"❌ {app_phrase(apps)}发布失败"]
+    if run_url:
+        lines.append(run_url)
+    if reason:
+        lines.append(reason)
+    return "\n".join(lines)
+
+
+def detect_published_apps(marker_root: Path, apps: list[str]) -> list[str]:
+    published = []
+    for app in apps:
+        if any(app in path.parts for path in marker_root.glob("**/publish-success")):
+            published.append(app)
+    return published
+
+
 def send_telegram(bot_token: str, chat_id: str, text: str, *, silent: bool) -> None:
-    payload = json.dumps(
-        {
-            "chat_id": chat_id,
-            "text": text,
-            "disable_notification": silent,
-        },
-        ensure_ascii=False,
-    ).encode("utf-8")
+    payload_dict = {
+        "chat_id": chat_id,
+        "text": text,
+    }
+    # Success must be a silent Telegram message. Failure must omit this field
+    # so clients treat it as a normal system notification.
+    if silent:
+        payload_dict["disable_notification"] = True
+    payload = json.dumps(payload_dict, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(
         f"https://api.telegram.org/bot{bot_token}/sendMessage",
         data=payload,
@@ -88,34 +121,48 @@ def main() -> int:
     parser.add_argument("--prepare-result", required=True)
     parser.add_argument("--write-result", required=True)
     parser.add_argument("--publish-result", required=True)
+    parser.add_argument("--apps", default='["finance","basketball"]')
+    parser.add_argument("--run-url", default="")
     args = parser.parse_args()
 
+    apps = parse_apps(args.apps) or ["finance", "basketball"]
+    published = detect_published_apps(args.marker_root, apps)
     workflow_ok = all(
         result == "success"
         for result in (args.prepare_result, args.write_result, args.publish_result)
     )
+    run_url = args.run_url or f"https://github.com/{args.repository}/actions/runs/{args.run_id}"
+
     if workflow_ok:
         # Scheduled retry runs that only detect an already-completed batch stay quiet.
-        if not has_publish_marker(args.marker_root):
+        if not published:
             print("本次没有实际发布，跳过 Telegram 通知")
             return 0
-        label = BATCH_LABELS.get(args.batch, args.batch)
         send_telegram(
             args.bot_token,
             args.chat_id,
-            f"{label}发布已成功",
+            success_text(published),
             silent=True,
         )
         return 0
 
-    reasons = failed_steps(args.repository, args.run_id, args.github_token)
-    reason = "；".join(reasons[:3]) if reasons else "工作流执行失败"
-    send_telegram(
-        args.bot_token,
-        args.chat_id,
-        f"发布失败：{reason}",
-        silent=False,
-    )
+    failed = [app for app in apps if app not in published]
+    if published:
+        send_telegram(
+            args.bot_token,
+            args.chat_id,
+            success_text(published),
+            silent=True,
+        )
+    if failed:
+        reasons = failed_steps(args.repository, args.run_id, args.github_token)
+        reason = "；".join(reasons[:3]) if reasons else ""
+        send_telegram(
+            args.bot_token,
+            args.chat_id,
+            failure_text(failed, run_url, reason),
+            silent=False,
+        )
     return 0
 
 

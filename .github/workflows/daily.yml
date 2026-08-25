@@ -303,4 +303,6 @@ jobs:
             --marker-root .notification-results \
             --prepare-result "${{ needs.prepare.result }}" \
             --write-result "${{ needs.write.result }}" \
-            --publish-result "${{ needs.publish.result }}"
+            --publish-result "${{ needs.publish.result }}" \
+            --apps '${{ needs.prepare.outputs.apps }}' \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
