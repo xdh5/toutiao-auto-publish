@@ -1,0 +1,57 @@
+{
+  "date": "2026-08-25",
+  "generated_at": "2026-08-25T01:53:52.176860",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "9000万合同刚生效！夏普四年伤病史：全身上下如影随形",
+      "angle": "顶薪签约即成高危资产，NBA又一纸‘健康赌约’暴露联盟薪资泡沫与年轻球员生存困境",
+      "keywords": [
+        "Shaedon Sharpe",
+        "injury history"
+      ],
+      "keywords_cn": [
+        "夏普",
+        "伤病史"
+      ],
+      "content_type": "交易资讯",
+      "score": 98,
+      "controversy_level": "high",
+      "target_emotion": "震惊",
+      "why_pick": "顶薪签约+全身体伤病史形成强反差，直击球迷对‘溢价合同’的愤怒共鸣",
+      "_column_id": "chen-du-kuai-xun",
+      "_column_name": "NBA早报",
+      "_column_icon": "📰",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "每条消息3-5句，格式为【事件概述】+一句话老六辣评。短句、快节奏、有信息量但不啰嗦。像一个人肉RSS但有态度。禁止长篇大论，每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末围绕焦点比赛或交易消息做A/B预测投票，并先给判断。",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "3-5条最新NBA短消息加一句话辣评，可包含比赛结果、球星表现、伤病和交易动态。所有比分与球员数据必须来自素材。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
+      "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "夏普刚拿20.8分就撕裂半月板？这膝盖是租来的吧",
+      "content_type": "NBA微头条",
+      "content": "刚砍下20.8分生涯最佳赛季，夏普就在个人训练中右膝半月板撕裂，预计缺阵6个月，最早2027年2月回归。细数这哥们儿的伤病史：2022左肩、2024核心肌群手术、2024左肩再撕裂、2026左小腿+腓骨应力反应……五年五大伤，部位横跨肩腹腿骨膝。合同才进第一年，4年9000万。天赋肉眼可见，出勤率却像开了自动请假系统。这不是打球，是闯关游戏——每一关通关奖励都是下一次MRI。#夏普伤病史# #开拓者未来怎么办#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
