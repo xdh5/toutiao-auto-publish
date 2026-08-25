@@ -1,9 +1,9 @@
 {
   "date": "2026-08-25",
-  "generated_at": "2026-08-25T01:53:52.176860",
+  "generated_at": "2026-08-25T04:49:33.810028",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "morning",
+  "last_batch": "noon",
   "articles": [],
   "topics": [
     {
@@ -40,6 +40,43 @@
       "_batch_time": "08:00",
       "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
       "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    },
+    {
+      "title": "费城23号！76人官宣詹姆斯球衣制作：你买到了吗？",
+      "angle": "聚焦球迷抢购狂潮与身份符号迁移——老詹不是加盟，是‘空降式文化接管’，费城正用球衣预售速度丈量王朝预期。",
+      "keywords": [
+        "LeBron James",
+        "76ers",
+        "jersey launch"
+      ],
+      "keywords_cn": [
+        "勒布朗·詹姆斯",
+        "76人",
+        "球衣发售"
+      ],
+      "content_type": "交易资讯",
+      "score": 98,
+      "controversy_level": "high",
+      "target_emotion": "震惊",
+      "why_pick": "官宣球衣制作即官宣权力交接，引爆全网抢购与地域认同之争",
+      "_column_id": "wu-jian-kuai-xun",
+      "_column_name": "午间快讯",
+      "_column_icon": "⚡",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "3-5条消息，每条3-5句。格式：【事件概述】+ 一句话老六辣评。短句、快节奏、有信息量但不啰嗦。每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末放一个投票：'今天上午最劲爆的消息是？A.XX B.XX C.XX，我选A，你呢？'",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "上午最新NBA消息精选：比赛结果、球星数据、伤病、交易和突发事件。每条包含事实概述和一句话辣评。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
+      "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
     }
   ],
   "micro_posts": [
@@ -49,9 +86,17 @@
       "content_type": "NBA微头条",
       "content": "刚砍下20.8分生涯最佳赛季，夏普就在个人训练中右膝半月板撕裂，预计缺阵6个月，最早2027年2月回归。细数这哥们儿的伤病史：2022左肩、2024核心肌群手术、2024左肩再撕裂、2026左小腿+腓骨应力反应……五年五大伤，部位横跨肩腹腿骨膝。合同才进第一年，4年9000万。天赋肉眼可见，出勤率却像开了自动请假系统。这不是打球，是闯关游戏——每一关通关奖励都是下一次MRI。#夏普伤病史# #开拓者未来怎么办#",
       "post_id": ""
+    },
+    {
+      "batch": "noon",
+      "topic": "不是PS！76人真在NBA商店缝制勒布朗23号战袍",
+      "content_type": "NBA微头条",
+      "content": "刚刷到76人抖音——不是官宣，是实拍！美国NBA商店老师傅正一针一线缝勒布朗23号76人球衣。布料、烫标、号码全手工。不是P图，不是预告片，是真·上生产线了。球衣都开始缝了，人还在自由市场遛弯？这波操作比任何记者爆料都耐人寻味。要我说，这不是试探市场，是给未来主场留位置。你信不信他真会穿？#勒布朗加盟76人# #NBA球衣玄学#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "morning"
+    "morning",
+    "noon"
   ]
 }
