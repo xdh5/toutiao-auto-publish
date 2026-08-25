@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-25",
+  "generated_at": "2026-08-25T01:52:25.728299",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "今年上半年我国汽车出口超6000亿元 同比增长48.3%",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "453710262",
+      "_finance": true,
+      "_column_id": "finance-news-morning",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "📰",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "早间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "广东GDP破7万亿，汽车出口狂飙48.3%",
+      "content_type": "新闻微头条",
+      "content": "广东上半年GDP首破7万亿，72281.05亿元稳居全国第一，4.5%增速创近三年同期新高。更硬核的是：汽车出口6358.2亿元，暴涨48.3%；其中新能源车占3606.8亿元，猛增68.7%，销往全球210多个国家。越秀区‘五合一’统筹挖路，工期缩80天，承诺三年不重挖；白云区农业无人车已上路；外籍人才可考职业资格从18项扩至32项；南沙发现纯种野生莲；王虹、邓煜摘得菲尔兹奖——中国籍数学家零的突破。没有浮夸口号，全是实打实的底盘升级。#广东经济# #新质生产力#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
