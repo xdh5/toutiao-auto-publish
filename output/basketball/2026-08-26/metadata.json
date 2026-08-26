@@ -1,9 +1,9 @@
 {
   "date": "2026-08-26",
-  "generated_at": "2026-08-26T04:51:33.427286",
+  "generated_at": "2026-08-26T10:21:52.544506",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "noon",
+  "last_batch": "evening",
   "articles": [],
   "topics": [
     {
@@ -32,6 +32,41 @@
       "_batch_time": "12:00",
       "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
       "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
+    },
+    {
+      "title": "霍里直言不讳！哈登凭啥学老詹降薪？他又不靠工资赚钱",
+      "angle": "借霍里犀利言论切入，点破哈登与詹姆斯商业版图差异，反驳道德绑架式降薪论调。",
+      "keywords": [
+        "Robert Horry",
+        "James Harden"
+      ],
+      "keywords_cn": [
+        "罗伯特·霍里",
+        "詹姆斯·哈登"
+      ],
+      "content_type": "八卦趣事",
+      "score": 92,
+      "controversy_level": "high",
+      "target_emotion": "好奇",
+      "why_pick": "名宿暴论+球星对比+薪资敏感话题",
+      "_column_id": "nba-daily",
+      "_column_name": "NBA赛场日报",
+      "_column_icon": "📰",
+      "_writing_style": "快讯集锦体",
+      "_style_detail": "按比赛分块，每场2-3句话加一个记忆点，开头总结今日NBA主旋律，不得补写素材未提供的技术统计。",
+      "_word_count_range": [
+        400,
+        600
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
+      "_topic_domain": "NBA赛况汇总",
+      "_topic_guidance": "汇总当天NBA比赛的高光、冷门、绝杀和关键球员表现。按比赛分块，比分和球员数据严格取自素材。",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
+      "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
     }
   ],
   "micro_posts": [
@@ -41,9 +76,17 @@
       "content_type": "NBA微头条",
       "content": "詹姆斯+布朗空降费城，76人直接从鱼腩变争冠队！更绝的是老詹的“换队两年夺冠定律”——热火、骑士、湖人都验证过，这次在76人还能灵吗？他签了两年合同，还说是生涯最后一站，42岁的他和健康窗口期的恩比德，时间真的不多了。没夺冠不等于失败，但如果到2027年夏天连争冠底气都没了，那才是真崩盘。你觉得这赛季76人能走到哪一步？#76人争冠# #詹姆斯两年定律#",
       "post_id": ""
+    },
+    {
+      "batch": "evening",
+      "topic": "从雷霆探花到骑士老将，哈登37岁还在刷新历史",
+      "content_type": "NBA微头条",
+      "content": "哈登今天37岁了！从雷霆探花到骑士老将，16年换了6支队，拿下29339分、3次得分王、1次MVP，还进了历史75大。有人说他漂泊太累，有人说这是顶级球商的生存之道。37岁还在场上拼，不是为合同，是为那点没熄灭的火。你站哪边？觉得换队是无奈还是智慧的，评论区扣个数字让我看看！#詹姆斯哈登37岁生日# #NBA老将的坚持#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
+    "evening",
     "noon"
   ]
 }
