@@ -152,6 +152,7 @@ jobs:
   publish:
     name: 3. 发布 · ${{ matrix.app }}
     needs: [prepare, write]
+    if: ${{ always() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:

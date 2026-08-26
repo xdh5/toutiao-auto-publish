@@ -30,6 +30,17 @@ def test_manual_workflows_offer_both():
         assert "max-parallel: 1" in workflow
 
 
+def test_publish_runs_independently_after_one_writer_fails():
+    for name in ("batch.yml", "daily.yml"):
+        workflow = (ROOT / ".github" / "workflows" / name).read_text(
+            encoding="utf-8"
+        )
+
+        assert "if: ${{ always() && needs.prepare.result == 'success' }}" in workflow
+        assert "fail-fast: false" in workflow
+        assert "draft-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.app }}" in workflow
+
+
 def test_only_scheduled_runs_persist_batch_completion():
     scheduled = (ROOT / ".github" / "workflows" / "batch.yml").read_text(
         encoding="utf-8"
