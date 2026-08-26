@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-26",
+  "generated_at": "2026-08-26T04:49:31.086571",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "noon",
+  "articles": [],
+  "topics": [
+    {
+      "title": "New Analysis Evaluates Major U.S. Investors’ Record on Key Climate Shareholder Votes",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "海外商业",
+      "score": 100,
+      "_source_article_id": "454212212",
+      "_finance": true,
+      "_column_id": "finance-news-noon",
+      "_column_name": "财经科技新闻",
+      "_column_icon": "🌐",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "与中国读者相关的海外财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午间海外商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "noon",
+      "topic": "贝莱德先锋气候投票垫底， Sierra Club新榜单揭底",
+      "content_type": "新闻微头条",
+      "content": "华尔街巨头的气候承诺正在缩水！积极管理中心（CAS）最新接入塞拉俱乐部“隐藏风险”数据，结果显示先锋集团和贝莱德对气候建议的投票一致率分别仅为0%和1%，而几十家机构拿下100%满分。相比2021年支持超40%环境提案，如今两家巨头明显倒退，转向“客户选择”策略。作为化石燃料前两大投资者，贝莱德甚至在2025年被塞拉俱乐部基金会撤资。代理投票关乎信义义务，你的养老基金是否也在忽视气候金融风险？选基金不能只看收益，还得看它是否替你规避了隐形炸弹。你会因气候投票记录换基金吗？#海外商业# #ESG投资#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "noon"
+  ]
+}
