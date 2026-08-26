@@ -1,9 +1,9 @@
 {
   "date": "2026-08-26",
-  "generated_at": "2026-08-26T04:49:31.086571",
+  "generated_at": "2026-08-26T10:00:30.444237",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "noon",
+  "last_batch": "evening",
   "articles": [],
   "topics": [
     {
@@ -37,6 +37,38 @@
       "_batch_time": "12:00",
       "_reader_scenario": "午间海外商业资讯",
       "_overall_tone": "简洁、客观、信息密度高"
+    },
+    {
+      "title": "受台风影响 海南部分进出岛旅客列车临时停运",
+      "angle": "严格依据原文",
+      "keywords": [
+        "technology",
+        "innovation",
+        "digital business"
+      ],
+      "keywords_cn": [],
+      "content_type": "科技动态",
+      "score": 100,
+      "_source_article_id": "454089650",
+      "_finance": true,
+      "_column_id": "finance-news-evening",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "💼",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整且早间未发布的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "晚间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
     }
   ],
   "micro_posts": [
@@ -46,9 +78,17 @@
       "content_type": "新闻微头条",
       "content": "华尔街巨头的气候承诺正在缩水！积极管理中心（CAS）最新接入塞拉俱乐部“隐藏风险”数据，结果显示先锋集团和贝莱德对气候建议的投票一致率分别仅为0%和1%，而几十家机构拿下100%满分。相比2021年支持超40%环境提案，如今两家巨头明显倒退，转向“客户选择”策略。作为化石燃料前两大投资者，贝莱德甚至在2025年被塞拉俱乐部基金会撤资。代理投票关乎信义义务，你的养老基金是否也在忽视气候金融风险？选基金不能只看收益，还得看它是否替你规避了隐形炸弹。你会因气候投票记录换基金吗？#海外商业# #ESG投资#",
       "post_id": ""
+    },
+    {
+      "batch": "evening",
+      "topic": "台风红霞逼停海南列车，退票免手续费别亏钱",
+      "content_type": "新闻微头条",
+      "content": "台风“红霞”这波冲击波太猛了！预计以台风或强台风级在惠来到深圳沿海登陆，广东水利防汛防台风应急响应已升至Ⅱ级，东莞“四停”、深汕汕尾“五停”。海南铁路25日至27日多趟进出岛列车停运，广州南站26日全线停运，水上航班也停了。这就像投资遇到黑天鹅，必须果断止损！好消息是停运列车30日内退票免手续费，12306 APP就能办。粤BA和粤超比赛也延期到8月1日。安全是最大的基本面，千万别跟天气对赌。行程受影响的朋友，评论区聊聊你怎么应对？\n#台风红霞# #列车停运退票#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
+    "evening",
     "noon"
   ]
 }
