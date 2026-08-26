@@ -62,7 +62,8 @@ def call_llm(url, api_key, model, messages, temperature=0.7, max_tokens=4096, ti
     def _call(u, k, m):
         resp = requests.post(u, json={
             "model": m, "messages": messages, "temperature": temperature,
-            "max_tokens": max_tokens, "stream": False
+            "max_tokens": max_tokens, "stream": False,
+            "enable_thinking": False,
         }, headers={"Authorization": f"Bearer {k}", "Content-Type": "application/json"}, timeout=timeout)
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]

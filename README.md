@@ -76,7 +76,7 @@ python -m app.micro_publisher 2026-08-24 --batch=morning
 | `BASKETBALL_TOUTIAO_AUTH_GZ` | 篮球头条号登录状态 |
 | `FINANCE_DASHSCOPE_API_KEY` | 财经通义千问 |
 | `BASKETBALL_DASHSCOPE_API_KEY` | 篮球通义千问 |
-| `QWEN_MODEL`（Repository Variable） | 通义千问模型，默认 `qwen3.8-max` |
+| `QWEN_MODEL`（Repository Variable） | 通义千问模型，默认 `qwen3.7-plus` |
 | `FINANCE_WORLD_NEWS_API_KEY` | 财经 World News |
 | `FINANCE_UNSPLASH_ACCESS_KEY` | 财经配图 |
 | `BASKETBALL_UNSPLASH_ACCESS_KEY` | 篮球配图 |

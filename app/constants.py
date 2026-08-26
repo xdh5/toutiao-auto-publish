@@ -39,7 +39,7 @@ def _resolve_api_key(default, *env_names):
 
 DASHSCOPE_KEY = _resolve_api_key("", "DASHSCOPE_API_KEY")
 DASHSCOPE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-QWEN_MODEL = (os.environ.get("QWEN_MODEL") or "qwen3.8-max").strip()
+QWEN_MODEL = (os.environ.get("QWEN_MODEL") or "qwen3.7-plus").strip()
 UNSPLASH_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
 WORLD_NEWS_API_KEY = _resolve_api_key("", "WORLD_NEWS_API_KEY")
 WORLD_NEWS_URL = "https://api.worldnewsapi.com/search-news"
