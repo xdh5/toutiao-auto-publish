@@ -1,0 +1,49 @@
+{
+  "date": "2026-08-26",
+  "generated_at": "2026-08-26T04:51:33.427286",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "noon",
+  "articles": [],
+  "topics": [
+    {
+      "title": "76人组建豪华争冠阵容 新赛季不进总决赛是否就算失败？",
+      "angle": "严格依据这篇原始新闻改写，不增加来源外事实",
+      "keywords": [],
+      "keywords_cn": [],
+      "content_type": "热点球评",
+      "_source_article_id": null,
+      "_source_url": "https://news.zhibo8.com/nba/2026-08-26/6a8e680bdaa93native.htm",
+      "_column_id": "wu-jian-kuai-xun",
+      "_column_name": "午间快讯",
+      "_column_icon": "⚡",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "3-5条消息，每条3-5句。格式：【事件概述】+ 一句话老六辣评。短句、快节奏、有信息量但不啰嗦。每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末放一个投票：'今天上午最劲爆的消息是？A.XX B.XX C.XX，我选A，你呢？'",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "上午最新NBA消息精选：比赛结果、球星数据、伤病、交易和突发事件。每条包含事实概述和一句话辣评。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
+      "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "noon",
+      "topic": "詹姆斯加盟76人冲冠？42岁老将的最后一搏",
+      "content_type": "NBA微头条",
+      "content": "詹姆斯+布朗空降费城，76人直接从鱼腩变争冠队！更绝的是老詹的“换队两年夺冠定律”——热火、骑士、湖人都验证过，这次在76人还能灵吗？他签了两年合同，还说是生涯最后一站，42岁的他和健康窗口期的恩比德，时间真的不多了。没夺冠不等于失败，但如果到2027年夏天连争冠底气都没了，那才是真崩盘。你觉得这赛季76人能走到哪一步？#76人争冠# #詹姆斯两年定律#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "noon"
+  ]
+}
