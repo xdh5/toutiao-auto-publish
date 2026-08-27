@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-27",
+  "generated_at": "2026-08-27T05:39:54.151416",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "广州上半年一手房网签面积增10%，城市更新固投增幅达33%",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "454364610",
+      "_finance": true,
+      "_column_id": "finance-news-morning",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "📰",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "早间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "广州楼市半年报：网签涨10%背后的真信号",
+      "content_type": "新闻微头条",
+      "content": "广州楼市交出半年成绩单，一手房网签面积同比增10%，房价还连涨了4个月，去化周期也缩到15.3个月。但真正值得盯的是城市更新：上半年固投1209亿元，暴涨33%，新开工安置房3.6万套，罗冲围首栋安置房都封顶了。这不是简单盖楼，而是用“指挥部+公司”机制加房票安置，把旧改和智能建造绑在一起干。今年模块化建筑产能2万箱体，明年直接翻倍。当别人还在猜底的时候，广州已经在重构城市骨架了。你觉得这种模式能复制到其他城市吗？#广州楼市# #城市更新#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
