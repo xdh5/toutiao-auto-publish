@@ -1,0 +1,59 @@
+{
+  "date": "2026-08-28",
+  "generated_at": "2026-08-27T19:55:27.352761",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "evening",
+  "articles": [],
+  "topics": [
+    {
+      "title": "杜兰特喊话勇士：该给库里股份！品牌价值无可估量",
+      "angle": "借杜兰特之口点破NBA商业本质，超巨不仅是球员更是球队资产，探讨球星与老板的利益博弈。",
+      "keywords": [
+        "Kevin Durant",
+        "Stephen Curry",
+        "Warriors"
+      ],
+      "keywords_cn": [
+        "杜兰特",
+        "库里",
+        "勇士股份"
+      ],
+      "content_type": "八卦趣事",
+      "score": 92,
+      "controversy_level": "high",
+      "target_emotion": "震惊",
+      "why_pick": "KD言论犀利引热议，契合休赛期场外权重",
+      "_column_id": "nba-daily",
+      "_column_name": "NBA赛场日报",
+      "_column_icon": "📰",
+      "_writing_style": "快讯集锦体",
+      "_style_detail": "按比赛分块，每场2-3句话加一个记忆点，开头总结今日NBA主旋律，不得补写素材未提供的技术统计。",
+      "_word_count_range": [
+        400,
+        600
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
+      "_topic_domain": "NBA赛况汇总",
+      "_topic_guidance": "汇总当天NBA比赛的高光、冷门、绝杀和关键球员表现。按比赛分块，比分和球员数据严格取自素材。",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
+      "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "evening",
+      "topic": "杜兰特喊话勇士：库里该拿股份，他值这个价",
+      "content_type": "NBA微头条",
+      "content": "杜兰特上《Boardroom》播客语出惊人：NBA球星就该拿球队股份！他直接点名勇士，说库里自2015年崛起后让球队估值飙升，球迷买票买球衣、带火湾区经济，全凭“库里”二字。KD还拿麦迪在魔术、姚明在火箭举例，哪怕巅峰短，商业红利也炸裂。就像他去休斯敦打球，门票立马涨。说白了，球星就是印钞机，趁热给股份才实在。评论区站队：觉得库里该拿股份扣1，反对的扣2！#杜兰特谈库里股份# #NBA球星权益#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "evening"
+  ]
+}
