@@ -1,9 +1,9 @@
 {
   "date": "2026-08-27",
-  "generated_at": "2026-08-27T05:41:50.872148",
+  "generated_at": "2026-08-27T15:10:17.142287",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "morning",
+  "last_batch": "noon",
   "articles": [],
   "topics": [
     {
@@ -42,6 +42,33 @@
       "_batch_time": "08:00",
       "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
       "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    },
+    {
+      "title": "克莱父亲：我劝他回洛杉矶 但热火对他的吸引力实在太大了",
+      "angle": "严格依据这篇原始新闻改写，不增加来源外事实",
+      "keywords": [],
+      "keywords_cn": [],
+      "content_type": "热点球评",
+      "_source_article_id": null,
+      "_source_url": "https://news.zhibo8.com/nba/2026-08-27/6a90444de856enative.htm",
+      "_column_id": "wu-jian-kuai-xun",
+      "_column_name": "午间快讯",
+      "_column_icon": "⚡",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "3-5条消息，每条3-5句。格式：【事件概述】+ 一句话老六辣评。短句、快节奏、有信息量但不啰嗦。每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末放一个投票：'今天上午最劲爆的消息是？A.XX B.XX C.XX，我选A，你呢？'",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "上午最新NBA消息精选：比赛结果、球星数据、伤病、交易和突发事件。每条包含事实概述和一句话辣评。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
+      "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
     }
   ],
   "micro_posts": [
@@ -51,9 +78,17 @@
       "content_type": "NBA微头条",
       "content": "2K27给詹姆斯91分，比上代少3分，炸锅了吧？2K营销主管Ronnie在House of Highlights采访里说透了：第24季+新球队，出场时间和使用率都得重算，数值自然要调。他还强调游戏里有历史版勒布朗，现役分得贴合现实。被问能不能改分，Ronnie留了活口：“先看他是否提出异议，再考虑。”这不叫敷衍，叫专业尊重。你觉得91分对24年老詹公平吗？评论区站队，觉得合理扣1，该调高扣2！#NBA2K27# #詹姆斯能力值#",
       "post_id": ""
+    },
+    {
+      "batch": "noon",
+      "topic": "克莱拒湖人真因曝光！为抢第5冠拼了",
+      "content_type": "NBA微头条",
+      "content": "老汤普森最近透了个底，当初劝儿子回湖人费尽口舌，但克莱压根没动摇。人家心里早锁定了迈阿密，能和字母哥、阿德巴约当队友，再被莱利和斯波调教，这诱惑比情怀大太多！说白了，克莱现在眼里只有第5冠，还非得赶在库里、詹姆斯和追梦之前拿到。这哪是打球，简直是跟老友较劲！换你面对顶级配置和家乡安逸，怎么选？评论区站队！#克莱汤普森# #NBA热点#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "morning"
+    "morning",
+    "noon"
   ]
 }
