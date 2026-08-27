@@ -1,0 +1,59 @@
+{
+  "date": "2026-08-27",
+  "generated_at": "2026-08-27T05:41:50.872148",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "2K能力值跌3分！41岁詹姆斯加盟76人，这评分合理吗？",
+      "angle": "结合2K官方回应与76人新阵容磨合现状，探讨高龄巨星评分争议背后的竞技逻辑与球迷情感冲突。",
+      "keywords": [
+        "LeBron James",
+        "NBA 2K",
+        "76ers"
+      ],
+      "keywords_cn": [
+        "勒布朗·詹姆斯",
+        "NBA 2K",
+        "费城76人"
+      ],
+      "content_type": "八卦趣事",
+      "score": 98,
+      "controversy_level": "high",
+      "target_emotion": "好奇",
+      "why_pick": "2K评分争议叠加詹皇新东家热度",
+      "_column_id": "chen-du-kuai-xun",
+      "_column_name": "NBA早报",
+      "_column_icon": "📰",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "每条消息3-5句，格式为【事件概述】+一句话老六辣评。短句、快节奏、有信息量但不啰嗦。像一个人肉RSS但有态度。禁止长篇大论，每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末围绕焦点比赛或交易消息做A/B预测投票，并先给判断。",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "3-5条最新NBA短消息加一句话辣评，可包含比赛结果、球星表现、伤病和交易动态。所有比分与球员数据必须来自素材。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
+      "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "2K27詹姆斯能力值降3分！官方回应太真实",
+      "content_type": "NBA微头条",
+      "content": "2K27给詹姆斯91分，比上代少3分，炸锅了吧？2K营销主管Ronnie在House of Highlights采访里说透了：第24季+新球队，出场时间和使用率都得重算，数值自然要调。他还强调游戏里有历史版勒布朗，现役分得贴合现实。被问能不能改分，Ronnie留了活口：“先看他是否提出异议，再考虑。”这不叫敷衍，叫专业尊重。你觉得91分对24年老詹公平吗？评论区站队，觉得合理扣1，该调高扣2！#NBA2K27# #詹姆斯能力值#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
