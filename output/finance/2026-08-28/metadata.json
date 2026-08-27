@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-28",
+  "generated_at": "2026-08-27T19:53:46.756306",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "evening",
+  "articles": [],
+  "topics": [
+    {
+      "title": "三部门调拨2.5万件物资支持粤赣湘等地救灾救助工作",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "454304066",
+      "_finance": true,
+      "_column_id": "finance-news-evening",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "💼",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整且早间未发布的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "晚间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "evening",
+      "topic": "最强初台来袭！广东救灾响应升级，白云机场取消377班",
+      "content_type": "新闻微头条",
+      "content": "台风“红霞”作为21世纪以来登陆广东的最强初台，虽迟但猛。国家反应极快，发改委紧急安排1亿元中央预算内投资支持灾后恢复，三部门同步调拨2.5万件物资驰援粤赣湘。交通方面主打一个动态平衡：白云机场虽取消377班航班、海心桥暂时关闭，但随着风力减弱，港珠澳大桥和广州地铁部分区段已迅速恢复。目前广东救灾响应已升至Ⅱ级，预计台风明天凌晨入湘。这种“该停则停、该通则通”的精细化调度，就是城市韧性的最佳体现。你所在的城市受影响了吗？#台风红霞# #广东救灾#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "evening"
+  ]
+}
