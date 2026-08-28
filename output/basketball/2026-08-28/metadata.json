@@ -1,9 +1,9 @@
 {
   "date": "2026-08-28",
-  "generated_at": "2026-08-27T19:55:27.352761",
+  "generated_at": "2026-08-28T07:49:38.926903",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "evening",
+  "last_batch": "morning",
   "articles": [],
   "topics": [
     {
@@ -42,6 +42,45 @@
       "_batch_time": "17:30",
       "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
       "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
+    },
+    {
+      "title": "武圣炮轰詹姆斯赴76人：投奔强队削弱GOAT底气",
+      "angle": "借斯蒂芬·杰克逊犀利点评切入，探讨巨星加盟争冠球队对历史地位评价的双刃剑效应，引发球迷关于'抱团'与'冠军'的价值辩论。",
+      "keywords": [
+        "Stephen Jackson",
+        "LeBron James",
+        "76ers",
+        "GOAT"
+      ],
+      "keywords_cn": [
+        "斯蒂芬·杰克逊",
+        "勒布朗·詹姆斯",
+        "76人",
+        "GOAT之争"
+      ],
+      "content_type": "八卦趣事",
+      "score": 108,
+      "controversy_level": "high",
+      "target_emotion": "愤怒",
+      "why_pick": "名宿争议言论+詹皇转会热点+GOAT话题三重爆款叠加",
+      "_column_id": "chen-du-kuai-xun",
+      "_column_name": "NBA早报",
+      "_column_icon": "📰",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "每条消息3-5句，格式为【事件概述】+一句话老六辣评。短句、快节奏、有信息量但不啰嗦。像一个人肉RSS但有态度。禁止长篇大论，每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末围绕焦点比赛或交易消息做A/B预测投票，并先给判断。",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "3-5条最新NBA短消息加一句话辣评，可包含比赛结果、球星表现、伤病和交易动态。所有比分与球员数据必须来自素材。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
+      "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
     }
   ],
   "micro_posts": [
@@ -51,9 +90,17 @@
       "content_type": "NBA微头条",
       "content": "杜兰特上《Boardroom》播客语出惊人：NBA球星就该拿球队股份！他直接点名勇士，说库里自2015年崛起后让球队估值飙升，球迷买票买球衣、带火湾区经济，全凭“库里”二字。KD还拿麦迪在魔术、姚明在火箭举例，哪怕巅峰短，商业红利也炸裂。就像他去休斯敦打球，门票立马涨。说白了，球星就是印钞机，趁热给股份才实在。评论区站队：觉得库里该拿股份扣1，反对的扣2！#杜兰特谈库里股份# #NBA球星权益#",
       "post_id": ""
+    },
+    {
+      "batch": "morning",
+      "topic": "杰克逊炮轰詹姆斯：去76人争冠？GOAT讨论直接出局",
+      "content_type": "NBA微头条",
+      "content": "斯蒂芬·杰克逊最近在《ALL THE SMOKE》播客里放了个大招：勒布朗要是去了兵强马壮的76人，GOAT讨论直接掉档！他说得直白——重返骑士才是正解，加盟现成强队算什么挑战自我？这话听着扎心，但老派球员就认这个理儿。就像职场里拒绝高薪挖角、非要回老单位扛旗的狠角色，路径比结果更重要。你觉得呢？支持杰克逊观点的扣1，觉得追冠无罪的扣2，评论区见真章！#NBA八卦# #GOAT之争#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "evening"
+    "evening",
+    "morning"
   ]
 }
