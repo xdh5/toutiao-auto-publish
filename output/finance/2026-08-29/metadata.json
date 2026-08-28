@@ -1,9 +1,9 @@
 {
   "date": "2026-08-29",
-  "generated_at": "2026-08-28T16:31:32.805933",
+  "generated_at": "2026-08-28T20:54:23.981678",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "noon",
+  "last_batch": "evening",
   "articles": [],
   "topics": [
     {
@@ -37,6 +37,38 @@
       "_batch_time": "12:00",
       "_reader_scenario": "午间海外商业资讯",
       "_overall_tone": "简洁、客观、信息密度高"
+    },
+    {
+      "title": "今年上半年广州城市更新固定资产投资增长33%",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "454480458",
+      "_finance": true,
+      "_column_id": "finance-news-evening",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "💼",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整且早间未发布的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "晚间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
     }
   ],
   "micro_posts": [
@@ -46,9 +78,17 @@
       "content_type": "新闻微头条",
       "content": "福斯特·格里芬昨天6.2局丢3分，断了连续8场低失分神迹，但2.76 ERA和5.6%保送率依然吸睛。这位30岁左投去年550万签约，从日职回归后成国民队宝藏。如今光芒缺稳定先发、费城需轮值深度，两队都在盯着。可国民54胜52负仅差外卡1场，卖人等于削弱自己；刚用米德换厄利已是高抛低吸典范，再动格里芬风险太大。尤其费城是分区位对手，交易更添顾虑。一边是即战力冲季后赛，一边是高位套现攒未来，这道选择题太难了。你觉得国民该卖还是留？#MLB交易# #棒球财经#",
       "post_id": ""
+    },
+    {
+      "batch": "evening",
+      "topic": "广州楼市半年报：城市更新投资猛增33%背后",
+      "content_type": "新闻微头条",
+      "content": "广州上半年楼市数据出来了，一手房网签面积507.86万平方米，同比增10%，价格更是连涨4个月，去化周期缩到15.3个月。这还没完，城市更新固定资产投资干了1209亿元，猛增33%，新开工安置房3.6万套。更硬核的是智能建造，产值1560亿元，增长15%，模块化建筑产能今年要冲2万个箱体，城中村改造项目里应用比例已超15%。中建科技、中集集团这些巨头都来布局了。当盖房子变成精密制造，加上城市更新真金白银砸下去，这波企稳是不是有点不一样？你觉得广州这轮行情能持续多久？#广州楼市# #城市更新#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
+    "evening",
     "noon"
   ]
 }
