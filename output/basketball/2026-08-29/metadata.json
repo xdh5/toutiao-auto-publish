@@ -1,0 +1,57 @@
+{
+  "date": "2026-08-29",
+  "generated_at": "2026-08-28T16:33:07.949002",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "noon",
+  "articles": [],
+  "topics": [
+    {
+      "title": "塔克盛赞克莱+点名热火首发五虎，这话里有话？",
+      "angle": "借PJ-塔克对克莱和热火首发的评价切入，探讨老将视角下的争冠标准与更衣室话语权",
+      "keywords": [
+        "PJ Tucker",
+        "Klay Thompson"
+      ],
+      "keywords_cn": [
+        "PJ-塔克",
+        "克莱-汤普森"
+      ],
+      "content_type": "八卦趣事",
+      "score": 82,
+      "controversy_level": "medium",
+      "target_emotion": "好奇",
+      "why_pick": "唯一NBA素材，老将点评引争议",
+      "_column_id": "wu-jian-kuai-xun",
+      "_column_name": "午间快讯",
+      "_column_icon": "⚡",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "3-5条消息，每条3-5句。格式：【事件概述】+ 一句话老六辣评。短句、快节奏、有信息量但不啰嗦。每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末放一个投票：'今天上午最劲爆的消息是？A.XX B.XX C.XX，我选A，你呢？'",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "上午最新NBA消息精选：比赛结果、球星数据、伤病、交易和突发事件。每条包含事实概述和一句话辣评。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
+      "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "noon",
+      "topic": "塔克点破热火命门：字母哥身边没射手真不行",
+      "content_type": "NBA微头条",
+      "content": "PJ·塔克上《Uninterrupted》节目聊热火，一点没绕弯子。他说阿德巴约和字母哥身边必须有射手，不然对手一包夹，进攻就卡壳。他还特意夸了队里那位出色投手，明眼人都知道说的是克莱。目前热火潜在首发是小米切尔、克莱、维金斯、字母哥、阿德巴约，塔克直言这套五虎极具竞争力。说白了，没空间的双核就是自废武功，塔克这话算是说到根上了。你觉得热火这套阵容能走多远？#热火# #PJ塔克#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "noon"
+  ]
+}
