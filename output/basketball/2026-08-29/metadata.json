@@ -1,9 +1,9 @@
 {
   "date": "2026-08-29",
-  "generated_at": "2026-08-28T16:33:07.949002",
+  "generated_at": "2026-08-28T20:56:22.388251",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "noon",
+  "last_batch": "evening",
   "articles": [],
   "topics": [
     {
@@ -40,6 +40,41 @@
       "_batch_time": "12:00",
       "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
       "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
+    },
+    {
+      "title": "便士谈奥尼尔加盟湖人：那是我一生最糟的一天",
+      "angle": "从便士哈达威的绝望视角切入，揭秘90年代巨星抱团背后被牺牲者的真实痛楚，打破球迷对OK组合前奏的浪漫滤镜。",
+      "keywords": [
+        "Anfernee Hardaway",
+        "Shaquille O'Neal"
+      ],
+      "keywords_cn": [
+        "便士哈达威",
+        "奥尼尔"
+      ],
+      "content_type": "八卦趣事",
+      "score": 88,
+      "controversy_level": "medium",
+      "target_emotion": "震惊",
+      "why_pick": "名宿自曝至暗时刻反差感强符合人设",
+      "_column_id": "nba-daily",
+      "_column_name": "NBA赛场日报",
+      "_column_icon": "📰",
+      "_writing_style": "快讯集锦体",
+      "_style_detail": "按比赛分块，每场2-3句话加一个记忆点，开头总结今日NBA主旋律，不得补写素材未提供的技术统计。",
+      "_word_count_range": [
+        400,
+        600
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
+      "_topic_domain": "NBA赛况汇总",
+      "_topic_guidance": "汇总当天NBA比赛的高光、冷门、绝杀和关键球员表现。按比赛分块，比分和球员数据严格取自素材。",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
+      "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
     }
   ],
   "micro_posts": [
@@ -49,9 +84,17 @@
       "content_type": "NBA微头条",
       "content": "PJ·塔克上《Uninterrupted》节目聊热火，一点没绕弯子。他说阿德巴约和字母哥身边必须有射手，不然对手一包夹，进攻就卡壳。他还特意夸了队里那位出色投手，明眼人都知道说的是克莱。目前热火潜在首发是小米切尔、克莱、维金斯、字母哥、阿德巴约，塔克直言这套五虎极具竞争力。说白了，没空间的双核就是自废武功，塔克这话算是说到根上了。你觉得热火这套阵容能走多远？#热火# #PJ塔克#",
       "post_id": ""
+    },
+    {
+      "batch": "evening",
+      "topic": "7年1.2亿签约前夜，奥尼尔敲门道歉让便士心碎",
+      "content_type": "NBA微头条",
+      "content": "便士哈达威上追梦播客聊起1996年奥尼尔去湖人那段往事，听着都心疼。当时全队接受采访，记者突然问他没沙克啥感觉，他还认真回答“毁灭性打击”，结果记者直接说奥尼尔马上签多年长约了。这哪是采访，分明是公开处刑！后来奥尼尔敲门道歉说“本该早点告诉你”，便士直接崩溃，说那感觉像要了命。要知道7月19日鲨鱼刚签下7年1.2亿创纪录合同。钱到位了，兄弟情却碎了。换你被最好哥们这么“通知”，你能释怀吗？#NBA往事# #便士哈达威#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
+    "evening",
     "noon"
   ]
 }
