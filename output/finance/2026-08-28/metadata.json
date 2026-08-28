@@ -1,9 +1,9 @@
 {
   "date": "2026-08-28",
-  "generated_at": "2026-08-27T19:53:46.756306",
+  "generated_at": "2026-08-28T07:47:59.523594",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "evening",
+  "last_batch": "morning",
   "articles": [],
   "topics": [
     {
@@ -37,6 +37,38 @@
       "_batch_time": "17:30",
       "_reader_scenario": "晚间国内商业资讯",
       "_overall_tone": "简洁、客观、信息密度高"
+    },
+    {
+      "title": "今年上半年广州城市更新固定资产投资增长33%",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "454480458",
+      "_finance": true,
+      "_column_id": "finance-news-morning",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "📰",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "早间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
     }
   ],
   "micro_posts": [
@@ -46,9 +78,17 @@
       "content_type": "新闻微头条",
       "content": "台风“红霞”作为21世纪以来登陆广东的最强初台，虽迟但猛。国家反应极快，发改委紧急安排1亿元中央预算内投资支持灾后恢复，三部门同步调拨2.5万件物资驰援粤赣湘。交通方面主打一个动态平衡：白云机场虽取消377班航班、海心桥暂时关闭，但随着风力减弱，港珠澳大桥和广州地铁部分区段已迅速恢复。目前广东救灾响应已升至Ⅱ级，预计台风明天凌晨入湘。这种“该停则停、该通则通”的精细化调度，就是城市韧性的最佳体现。你所在的城市受影响了吗？#台风红霞# #广东救灾#",
       "post_id": ""
+    },
+    {
+      "batch": "morning",
+      "topic": "广州楼市半年报：城市更新投资猛增33%背后",
+      "content_type": "新闻微头条",
+      "content": "广州楼市半年报来了，这次不是画饼，是真干活！上半年一手房网签507.86万平方米，同比增10%，价格还连涨4个月，去化周期缩到15.3个月，市场明显在回血。更猛的是城市更新，投资1209亿元，同比暴涨33%，新开工安置房3.6万套，越秀小石集还成了全国原拆原建样板。智能建造也没落下，产值增15%，模块化建筑产能今年冲2万个箱体，城中村改造里用了15.8%。一边稳住房市基本面，一边用更新和智造砸出新动能，广州这步棋走得又稳又准。你所在的城市有没有类似动作？#广州楼市# #城市更新#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "evening"
+    "evening",
+    "morning"
   ]
 }
