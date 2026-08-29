@@ -1,9 +1,9 @@
 {
   "date": "2026-08-29",
-  "generated_at": "2026-08-28T20:56:22.388251",
+  "generated_at": "2026-08-29T04:46:37.701495",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "evening",
+  "last_batch": "morning",
   "articles": [],
   "topics": [
     {
@@ -75,6 +75,41 @@
       "_batch_time": "17:30",
       "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
       "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
+    },
+    {
+      "title": "富保罗拒评库明加合同？这句不评价比差评还扎心",
+      "angle": "从经纪人‘不能给负面评价所以不评价’的话术切入，犀利解读顶级经纪人在续约僵局中的潜台词与博弈手段。",
+      "keywords": [
+        "Jonathan Kuminga",
+        "Rich Paul"
+      ],
+      "keywords_cn": [
+        "库明加",
+        "富保罗"
+      ],
+      "content_type": "交易资讯",
+      "score": 92,
+      "controversy_level": "high",
+      "target_emotion": "好奇",
+      "why_pick": "休赛期续约僵局话题度高，经纪人话术引争议",
+      "_column_id": "chen-du-kuai-xun",
+      "_column_name": "NBA早报",
+      "_column_icon": "📰",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "每条消息3-5句，格式为【事件概述】+一句话老六辣评。短句、快节奏、有信息量但不啰嗦。像一个人肉RSS但有态度。禁止长篇大论，每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末围绕焦点比赛或交易消息做A/B预测投票，并先给判断。",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "3-5条最新NBA短消息加一句话辣评，可包含比赛结果、球星表现、伤病和交易动态。所有比分与球员数据必须来自素材。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
+      "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
     }
   ],
   "micro_posts": [
@@ -91,10 +126,18 @@
       "content_type": "NBA微头条",
       "content": "便士哈达威上追梦播客聊起1996年奥尼尔去湖人那段往事，听着都心疼。当时全队接受采访，记者突然问他没沙克啥感觉，他还认真回答“毁灭性打击”，结果记者直接说奥尼尔马上签多年长约了。这哪是采访，分明是公开处刑！后来奥尼尔敲门道歉说“本该早点告诉你”，便士直接崩溃，说那感觉像要了命。要知道7月19日鲨鱼刚签下7年1.2亿创纪录合同。钱到位了，兄弟情却碎了。换你被最好哥们这么“通知”，你能释怀吗？#NBA往事# #便士哈达威#",
       "post_id": ""
+    },
+    {
+      "batch": "morning",
+      "topic": "2年1250万签完不敢评？顶级经纪人的话术比合同还精妙",
+      "content_type": "NBA微头条",
+      "content": "库明加2年1250万合同落地，顶级经纪人里奇·保罗在播客里却打起太极。他跟名嘴Max坦言不会评价这份合同，因为经纪人行规明确禁止负面评价他人合约——这会直接拉低球员市场价值。\n\n这话表面是推脱，实则全是算计。不踩同行是底线，不捧场是留余地。2年1250万的数字已经够敏感，多说一个字都可能影响后续谈判。顶级经纪人靠的不是嘴快，而是让每句话都服务于长期利益。\n\n你觉得保罗是真守行规，还是这合同实在没法夸？评论区告诉我你的判断。\n\n#NBA交易# #里奇保罗#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
     "evening",
+    "morning",
     "noon"
   ]
 }
