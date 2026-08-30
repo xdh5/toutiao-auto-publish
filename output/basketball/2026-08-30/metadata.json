@@ -1,0 +1,59 @@
+{
+  "date": "2026-08-30",
+  "generated_at": "2026-08-30T02:19:56.610911",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "拒绝湖人真因曝光！不想当东契奇配角",
+      "angle": "从库明加拒绝加盟切入，犀利点破年轻球员对‘巨星附属品’身份的抗拒，揭示湖人引援困境并非钱的问题而是定位尴尬。",
+      "keywords": [
+        "Kuminga",
+        "Lakers",
+        "Doncic"
+      ],
+      "keywords_cn": [
+        "库明加",
+        "湖人",
+        "东契奇"
+      ],
+      "content_type": "交易资讯",
+      "score": 98,
+      "controversy_level": "high",
+      "target_emotion": "震惊",
+      "why_pick": "名记爆料拒湖原因，争议性强且符合交易热点",
+      "_column_id": "chen-du-kuai-xun",
+      "_column_name": "NBA早报",
+      "_column_icon": "📰",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "每条消息3-5句，格式为【事件概述】+一句话老六辣评。短句、快节奏、有信息量但不啰嗦。像一个人肉RSS但有态度。禁止长篇大论，每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末围绕焦点比赛或交易消息做A/B预测投票，并先给判断。",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "3-5条最新NBA短消息加一句话辣评，可包含比赛结果、球星表现、伤病和交易动态。所有比分与球员数据必须来自素材。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
+      "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "拒湖人3600万！库明加2年1200万签森林狼真相",
+      "content_type": "NBA微头条",
+      "content": "库明加2年1200万签森林狼，拒了湖人3年3600万！名记Brett Siegel揭秘：森林狼给首发+25-30分钟时间，湖人只能让他当东契奇身边角色球员，还只能给三年先签后换合同。库明加想要1+1合同尽快成完全自由球员，森林狼刚好满足。这选择就像放弃大厂螺丝钉选创业公司核心岗，为明年自由市场攒筹码。你觉得这操作清醒吗？评论区聊聊你的看法。\n#库明加签约森林狼# #NBA自由球员#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
