@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-30",
+  "generated_at": "2026-08-30T02:18:18.067623",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "广州发放首批商品房“卖旧买新”补贴，120名业主获得267.88万元",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "455246142",
+      "_finance": true,
+      "_column_id": "finance-news-morning",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "📰",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "早间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "广州发267万换房补贴，120户撬动8.5亿成交",
+      "content_type": "新闻微头条",
+      "content": "广州“卖旧买新”补贴首批落地，120户业主拿到267.88万元，撬动8.5亿交易额。超八成人换房面积增加20%-50%，58%跨区置换，75%新房均价涨超50%。申领全程线上，填10余项信息就行，有人半个月搞定换房。政策一出，5、6月一二手成交同比双增，房价指数环比上行，二手房挂牌量回落、议价空间收窄。国企试点也已收超1500单报名。小补贴撬动大流转，关键是把制度成本打下来了。换作是你，这波操作能让你下定决心换房吗？#广州楼市新政# #卖旧买新补贴#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
