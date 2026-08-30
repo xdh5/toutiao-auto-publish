@@ -1,9 +1,9 @@
 {
   "date": "2026-08-30",
-  "generated_at": "2026-08-30T02:19:56.610911",
+  "generated_at": "2026-08-30T09:55:50.033603",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "morning",
+  "last_batch": "noon",
   "articles": [],
   "topics": [
     {
@@ -42,6 +42,41 @@
       "_batch_time": "08:00",
       "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
       "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    },
+    {
+      "title": "詹姆斯去哪心腹就去哪？詹经理实锤还是高管甩锅",
+      "angle": "从NBA高管抱怨詹姆斯决定干扰赛程切入，结合媒体人曝出的'心腹随行'传闻，探讨巨星权力与联盟运营的博弈真相。",
+      "keywords": [
+        "LeBron James",
+        "NBA executives"
+      ],
+      "keywords_cn": [
+        "勒布朗·詹姆斯",
+        "NBA高管"
+      ],
+      "content_type": "八卦趣事",
+      "score": 108,
+      "controversy_level": "high",
+      "target_emotion": "好奇",
+      "why_pick": "巨星权力争议话题，契合休赛期流量密码",
+      "_column_id": "wu-jian-kuai-xun",
+      "_column_name": "午间快讯",
+      "_column_icon": "⚡",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "3-5条消息，每条3-5句。格式：【事件概述】+ 一句话老六辣评。短句、快节奏、有信息量但不啰嗦。每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末放一个投票：'今天上午最劲爆的消息是？A.XX B.XX C.XX，我选A，你呢？'",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "上午最新NBA消息精选：比赛结果、球星数据、伤病、交易和突发事件。每条包含事实概述和一句话辣评。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
+      "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
     }
   ],
   "micro_posts": [
@@ -51,9 +86,17 @@
       "content_type": "NBA微头条",
       "content": "库明加2年1200万签森林狼，拒了湖人3年3600万！名记Brett Siegel揭秘：森林狼给首发+25-30分钟时间，湖人只能让他当东契奇身边角色球员，还只能给三年先签后换合同。库明加想要1+1合同尽快成完全自由球员，森林狼刚好满足。这选择就像放弃大厂螺丝钉选创业公司核心岗，为明年自由市场攒筹码。你觉得这操作清醒吗？评论区聊聊你的看法。\n#库明加签约森林狼# #NBA自由球员#",
       "post_id": ""
+    },
+    {
+      "batch": "noon",
+      "topic": "詹皇去哪队友就跟到哪？76人新官上任引热议",
+      "content_type": "NBA微头条",
+      "content": "76人刚任命詹姆斯密友米姆斯为后勤主管，这哥们从骑士到湖人一路跟随，堪称“詹皇御用大管家”。奥尼尔当年都酸他能让全队改训练时间、带亲友上专机，直言自己从没这待遇。但特权也有风险——前队友达蒙·琼斯打着陪练幌子混进更衣室，结果靠卖詹姆斯和浓眉伤情赌球被抓，FBI都出手了。球星带团队到底是聪明还是越界？评论区扣1或2站队！#詹姆斯# #NBA八卦#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "morning"
+    "morning",
+    "noon"
   ]
 }
