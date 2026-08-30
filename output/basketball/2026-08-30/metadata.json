@@ -1,9 +1,9 @@
 {
   "date": "2026-08-30",
-  "generated_at": "2026-08-30T09:55:50.033603",
+  "generated_at": "2026-08-30T14:30:04.495893",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "noon",
+  "last_batch": "evening",
   "articles": [],
   "topics": [
     {
@@ -77,6 +77,41 @@
       "_batch_time": "12:00",
       "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
       "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
+    },
+    {
+      "title": "詹经理实锤？心腹随詹姆斯入职76人，这权力太大了",
+      "angle": "从媒体人爆料切入，探讨詹姆斯对球队人事任免的隐形掌控力，引发关于球星权力边界的争议讨论。",
+      "keywords": [
+        "LeBron James",
+        "76ers"
+      ],
+      "keywords_cn": [
+        "詹姆斯",
+        "76人"
+      ],
+      "content_type": "八卦趣事",
+      "score": 92,
+      "controversy_level": "high",
+      "target_emotion": "震惊",
+      "why_pick": "詹经理话题自带流量，结合76人新动向引爆争议",
+      "_column_id": "nba-daily",
+      "_column_name": "NBA赛场日报",
+      "_column_icon": "📰",
+      "_writing_style": "快讯集锦体",
+      "_style_detail": "按比赛分块，每场2-3句话加一个记忆点，开头总结今日NBA主旋律，不得补写素材未提供的技术统计。",
+      "_word_count_range": [
+        400,
+        600
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末预测明天比赛：'明天XX对XX，你觉得谁能赢？评论区下注，我先来——...'",
+      "_topic_domain": "NBA赛况汇总",
+      "_topic_guidance": "汇总当天NBA比赛的高光、冷门、绝杀和关键球员表现。按比赛分块，比分和球员数据严格取自素材。",
+      "_data_source_hint": "news",
+      "_batch_name": "晚间",
+      "_batch_time": "17:30",
+      "_reader_scenario": "下班通勤/晚饭后刷手机，需要爽感和谈资",
+      "_overall_tone": "有观点、有情绪、适合截图转发和评论区站队"
     }
   ],
   "micro_posts": [
@@ -93,9 +128,17 @@
       "content_type": "NBA微头条",
       "content": "76人刚任命詹姆斯密友米姆斯为后勤主管，这哥们从骑士到湖人一路跟随，堪称“詹皇御用大管家”。奥尼尔当年都酸他能让全队改训练时间、带亲友上专机，直言自己从没这待遇。但特权也有风险——前队友达蒙·琼斯打着陪练幌子混进更衣室，结果靠卖詹姆斯和浓眉伤情赌球被抓，FBI都出手了。球星带团队到底是聪明还是越界？评论区扣1或2站队！#詹姆斯# #NBA八卦#",
       "post_id": ""
+    },
+    {
+      "batch": "evening",
+      "topic": "从骑士到76人，詹姆斯密友再获高管职位，前队友却因泄密赌球被捕",
+      "content_type": "NBA微头条",
+      "content": "76人官宣詹姆斯密友米姆斯出任球员项目与后勤行政主管，这已经是他在骑士、湖人之后第三次担任该职。说白了就是管更衣室和后勤，确保詹姆斯的意志能落地。奥尼尔都曾吐槽在骑士时，詹姆斯一句话就能把训练从10点改到12点，连自己当湖人老大时都没这权力。但特权也有代价，前队友达蒙·琼斯就因借“私人投篮教练”身份进出更衣室，倒卖詹姆斯和浓眉伤病信息赌球被FBI抓了。一边是心腹稳坐高管位，一边是旧识锒铛入狱，这剧情比电影还跌宕。你觉得球星该有多大话语权？\n#詹姆斯# #NBA八卦#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
+    "evening",
     "morning",
     "noon"
   ]
