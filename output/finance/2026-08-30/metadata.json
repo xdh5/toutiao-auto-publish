@@ -1,9 +1,9 @@
 {
   "date": "2026-08-30",
-  "generated_at": "2026-08-30T02:18:18.067623",
+  "generated_at": "2026-08-30T09:54:12.987057",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "morning",
+  "last_batch": "noon",
   "articles": [],
   "topics": [
     {
@@ -37,6 +37,38 @@
       "_batch_time": "08:00",
       "_reader_scenario": "早间国内商业资讯",
       "_overall_tone": "简洁、客观、信息密度高"
+    },
+    {
+      "title": "Tech Issue Grounds American Airlines Flights Nationwide",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "海外商业",
+      "score": 100,
+      "_source_article_id": "455113178",
+      "_finance": true,
+      "_column_id": "finance-news-noon",
+      "_column_name": "财经科技新闻",
+      "_column_icon": "🌐",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "与中国读者相关的海外财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午间海外商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
     }
   ],
   "micro_posts": [
@@ -46,9 +78,17 @@
       "content_type": "新闻微头条",
       "content": "广州“卖旧买新”补贴首批落地，120户业主拿到267.88万元，撬动8.5亿交易额。超八成人换房面积增加20%-50%，58%跨区置换，75%新房均价涨超50%。申领全程线上，填10余项信息就行，有人半个月搞定换房。政策一出，5、6月一二手成交同比双增，房价指数环比上行，二手房挂牌量回落、议价空间收窄。国企试点也已收超1500单报名。小补贴撬动大流转，关键是把制度成本打下来了。换作是你，这波操作能让你下定决心换房吗？#广州楼市新政# #卖旧买新补贴#",
       "post_id": ""
+    },
+    {
+      "batch": "noon",
+      "topic": "40架飞机趴窝达拉斯，美航技术宕机代价几何",
+      "content_type": "新闻微头条",
+      "content": "周二傍晚，美国航空因IT故障被FAA下达全国地面停飞令。虽然公司事后道歉称系统正恢复，但现实很骨感：中部时间18:30，仅达拉斯机场就有超40架飞机在滑行道排队，其他枢纽同样拥堵。Flightradar24数据显示，当时天上美航航班比上周同期少了约130架次。美航没解释具体哪个软件出了问题，只说“连接受影响”。系统修好只是第一步，消化这波延误的连锁反应才是真正的硬仗。这种技术脆弱性带来的隐性成本，最后谁来买单？你坐飞机遇到过类似宕机延误吗？评论区聊聊。\n#美国航空# #航空IT故障#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "morning"
+    "morning",
+    "noon"
   ]
 }
