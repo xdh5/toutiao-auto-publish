@@ -1,9 +1,9 @@
 {
   "date": "2026-08-31",
-  "generated_at": "2026-08-31T02:15:03.587588",
+  "generated_at": "2026-08-31T10:46:43.274257",
   "total_articles": 0,
   "data_sources": {},
-  "last_batch": "morning",
+  "last_batch": "noon",
   "articles": [],
   "topics": [
     {
@@ -40,6 +40,41 @@
       "_batch_time": "08:00",
       "_reader_scenario": "通勤/早咖啡，需要快速了解发生了什么",
       "_overall_tone": "轻快、信息密度高、适合碎片化阅读"
+    },
+    {
+      "title": "怒值爆表！布朗放话新赛季要见血，谁在造谣？",
+      "angle": "结合杰伦·布朗怒斥媒体虚假叙事与‘带着杀气打球’的言论，探讨球星被舆论逼出的狠劲是否才是绿军真核觉醒的信号。",
+      "keywords": [
+        "Jaylen Brown",
+        "media narrative"
+      ],
+      "keywords_cn": [
+        "杰伦·布朗",
+        "媒体造谣"
+      ],
+      "content_type": "八卦趣事",
+      "score": 92,
+      "controversy_level": "high",
+      "target_emotion": "愤怒",
+      "why_pick": "情绪激烈+反击媒体，争议性拉满",
+      "_column_id": "wu-jian-kuai-xun",
+      "_column_name": "午间快讯",
+      "_column_icon": "⚡",
+      "_writing_style": "群聊播报体",
+      "_style_detail": "3-5条消息，每条3-5句。格式：【事件概述】+ 一句话老六辣评。短句、快节奏、有信息量但不啰嗦。每条独立成块。",
+      "_word_count_range": [
+        300,
+        500
+      ],
+      "_interaction_type": "prediction_poll",
+      "_interaction_guidance": "文末放一个投票：'今天上午最劲爆的消息是？A.XX B.XX C.XX，我选A，你呢？'",
+      "_topic_domain": "NBA快讯",
+      "_topic_guidance": "上午最新NBA消息精选：比赛结果、球星数据、伤病、交易和突发事件。每条包含事实概述和一句话辣评。",
+      "_data_source_hint": "match_preferred",
+      "_batch_name": "午间",
+      "_batch_time": "12:00",
+      "_reader_scenario": "午休刷手机，需要快速了解上午发生了什么",
+      "_overall_tone": "信息密度高、快节奏、适合午休碎片阅读"
     }
   ],
   "micro_posts": [
@@ -49,9 +84,17 @@
       "content_type": "NBA微头条",
       "content": "追梦格林播客又爆金句！这次聊的是库明加650万签森林狼的事。老追直接把话挑明：这价钱在NBA就是替补水平，你拿着替补的钱打首发，一旦阵容效果不好或者数据难看，你就是第一个被“拔掉插头”的人。\n\n这话听着刺耳，但全是现实。低价合同意味着球队没把你当非卖品，战绩一波动，最先动的就是你。就像职场降薪跳槽，干不好立马走人。\n\n你们觉得追梦这是老大哥掏心窝子劝告，还是纯属制造焦虑？评论区扣1或2站个队！\n#追梦格林# #库明加#",
       "post_id": ""
+    },
+    {
+      "batch": "noon",
+      "topic": "杰伦布朗怒怼名嘴：别拿假消息当真理",
+      "content_type": "NBA微头条",
+      "content": "被说“总觉得自己最聪明”？杰伦·布朗直接在播客开火！他点名Colin Cowherd，直言那些所谓“内部人士”的说法太疯狂。布朗毫不客气地指出，有些大机构就是在编故事、搞宣传、造虚假叙事。这话听着解气，也提醒咱们：别把八卦当真相。球员不是NPC，媒体也不是圣旨。下次看到“据透露”，先问问自己：这瓜保熟吗？\n\n#杰伦布朗# #NBA八卦#",
+      "post_id": ""
     }
   ],
   "batches_completed": [
-    "morning"
+    "morning",
+    "noon"
   ]
 }
