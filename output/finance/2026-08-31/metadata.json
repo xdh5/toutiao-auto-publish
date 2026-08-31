@@ -1,0 +1,54 @@
+{
+  "date": "2026-08-31",
+  "generated_at": "2026-08-31T02:13:26.708037",
+  "total_articles": 0,
+  "data_sources": {},
+  "last_batch": "morning",
+  "articles": [],
+  "topics": [
+    {
+      "title": "补贴到账，换房提速！广州267.88万元“卖旧买新”补贴撬动8.5亿元市场成交",
+      "angle": "严格依据原文",
+      "keywords": [
+        "business",
+        "company",
+        "manufacturing"
+      ],
+      "keywords_cn": [],
+      "content_type": "国内商业",
+      "score": 100,
+      "_source_article_id": "455672074",
+      "_finance": true,
+      "_column_id": "finance-news-morning",
+      "_column_name": "国内财经科技新闻",
+      "_column_icon": "📰",
+      "_writing_style": "商业新闻体",
+      "_style_detail": "忠实来源、简洁客观，不增加来源外的人物、数字、引语或结论",
+      "_word_count_range": [
+        1,
+        500
+      ],
+      "_interaction_type": "",
+      "_interaction_guidance": "",
+      "_topic_domain": "国内财经与科技新闻",
+      "_topic_guidance": "选择business或technology类别中信息最完整的一条",
+      "_data_source_hint": "news",
+      "_batch_name": "晨读",
+      "_batch_time": "08:00",
+      "_reader_scenario": "早间国内商业资讯",
+      "_overall_tone": "简洁、客观、信息密度高"
+    }
+  ],
+  "micro_posts": [
+    {
+      "batch": "morning",
+      "topic": "267万补贴撬动8.5亿成交，广州换房杠杆有多猛",
+      "content_type": "新闻微头条",
+      "content": "267.88万补贴撬动8.5亿成交，广州“卖旧买新”第一批次成绩单出来了。120户业主拿到钱，置换链条明显提速。越秀、保利等项目月均成交破百套，去化率冲到80%。更值得关注的是开发商动作：越秀上半年核心区砸了近250亿，绿城41%溢价抢地。中介反馈二手房议价空间收窄，低价抛售少了，近七成置换客实现了面积升级。专家说这是“四两拨千斤”，一二手联动循环正在打通。第二批3000万补贴三季度开申，额度翻10倍。你觉得这波操作能让观望者进场吗？#广州楼市# #卖旧买新#",
+      "post_id": ""
+    }
+  ],
+  "batches_completed": [
+    "morning"
+  ]
+}
