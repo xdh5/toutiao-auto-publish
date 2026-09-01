@@ -5,9 +5,7 @@ name: 调度健康检查
 # 终检（22:17 CST）：检查全部三个批次(morning/noon/evening)是否完成
 # 如有遗漏，通过 WxPusher 发送告警
 on:
-  schedule:
-    - cron: '17 14 * * *'  # 22:17 CST — 终检，检查全部三个批次（offset to avoid stampede）
-    - cron: '37 4 * * *'  # 12:37 CST — 午检，仅检查晨读是否完成，未完成则告警
+  # 已停用定时健康检查（2026-09-01，同步停止自动发布）
   workflow_dispatch:
 
 jobs:
